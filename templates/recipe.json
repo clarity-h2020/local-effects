@@ -1,0 +1,25 @@
+{
+  "config": {
+    "service_url": "http://localhost:8080/rasdaman/ows",
+    "tmp_directory": "/tmp/",
+    "crs_resolver": "http://localhost:8080/def/",
+    "default_crs": "http://localhost:8080/def/crs/EPSG/0/4326",
+    "mock": false,
+    "automated": true,
+    "skip": false,
+    "retries": 0,
+    "track_files": true,
+    "subset_correction": false
+  },
+  "input": {
+    "coverage_id": "#COLLECTION#",
+    "paths": ["#TIF_PATH#"]
+  },
+  "recipe": {
+    "name": "map_mosaic",
+    "options": {
+      "wms_import": true,
+      "tiling": "ALIGNED [0:500, 0:500]"
+    }
+  }
+}
