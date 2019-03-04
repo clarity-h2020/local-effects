@@ -1,0 +1,10 @@
+Esto vale para primero generar un shapefile que indexe cada fichero TIF
+que es un tile de un mapa mas grande
+gdaltindex index_eu_dem.shp *.TIF
+
+Luego se genera un recurso virtual que representaria la capa/TIF total de
+juntar todos los ficheros TIF o tiles individuales
+gdalbuildvrt eu_dem.vrt index_eu_dem.shp
+
+Ahora puedes extraer partes de ese conjunto usando el recurso virtual
+gdal_translate -projwin ulx uly lrx lry inraster.tif outraster.tif
