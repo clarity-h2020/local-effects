@@ -70,17 +70,16 @@ FILE="../data/N20E46/class_30/200km_10m_N20E46_class30.TIF"
 NAME=`echo $FILE | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
 
 #extract UA bbox from ESM raster
-#NEW
-echo "...Clipping ESM area..."
-FILE2="../data/UA_IT003L3_NAPOLI/Shapefiles/IT003L3_NAPOLI_UA2012.shp"
-SHP2=`ogrinfo $FILE2 | grep '1:' | cut -f 2 -d ' '`
-NAME=$SHP2"_"$LAYER
-N=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 2 -d ')' | cut -f 4 -d ' '`
-S=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 1 -d ')' | cut -f 3 -d ' '`
-E=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 3 -d '(' | cut -f 1 -d ','`
-W=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 2 -d '(' | cut -f 1 -d ','`
-gdalwarp -te $W $S $E $N $FILE $NAME"_clipped.tif"
-FILE=$NAME"_clipped.tif"
+#echo "...Clipping ESM area..."
+#FILE2="../data/UA_IT003L3_NAPOLI/Shapefiles/IT003L3_NAPOLI_UA2012.shp"
+#SHP2=`ogrinfo $FILE2 | grep '1:' | cut -f 2 -d ' '`
+#NAME=$SHP2"_"$LAYER
+#N=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 2 -d ')' | cut -f 4 -d ' '`
+#S=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 1 -d ')' | cut -f 3 -d ' '`
+#E=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 3 -d '(' | cut -f 1 -d ','`
+#W=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 2 -d '(' | cut -f 1 -d ','`
+#gdalwarp -te $W $S $E $N $FILE $NAME"_clipped.tif"
+#FILE=$NAME"_clipped.tif"
 
 #raster reclassification with treshold 30
 echo "...Reclassifying ESM raster..."
@@ -88,7 +87,7 @@ TIF=$NAME"_calculated.TIF"
 SHP=$NAME"_calculated.shp"
 NODATA=`gdalinfo $FILE | grep 'NoData' | cut -f 2 -d '='`
 python gdal_reclassify.py $FILE $TIF -r "$NODATA,1" -c "<30,>=30" -d $NODATA -n true -p "COMPRESS=LZW"
-rm $FILE
+#rm $FILE
 
 #raster parameters needed for polygonization
 LAT=`gdalinfo $TIF | grep 'latitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`

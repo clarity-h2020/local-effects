@@ -1,16 +1,45 @@
 INSTALL
 =======
 
-POSTGRES
+POSTGRES 9.6
 POSTGIS
-TOMCAT
-GEOSERVER
-GDAL-BIN / GDAL-DATA
+TOMCAT8
+GEOSERVER 2.14.1
+GDAL-BIN 2.2.2. / GDAL-DATA
 PYTHON
+
+sudo pip install rasterstats
 
 python-NUMPY
 libgdal-dev / libgdal-java
-grass / grass-core
+grass 76 / grass-core
+
+
+GRASS
+=====
+0) sustituir en el script:
+echo "GISDBASE: /home/mario.nunez/script/grass" >>$GISRC
+echo "LOCATION_NAME: location" >>$GISRC
+echo "MAPSET: PERMANENT" >>$GISRC
+#echo "MAPSET: mapset" >>$GISRC
+1) crear carpetas:
+grass/location/mapset
+grass/location/PERMANENT
+2) ejecutar:
+grass74 -c /home/mario.nunez/script/grass/location
+3) copiar ficheros de http://trac.osgeo.org/grass/browser/grass/trunk/demolocation#PERMANENT 
+PROJ_UNITS
+PROJ_INFO
+WIND
+DEFAULT_WIND
+
+
+
+
+
+
+
+
 
 --BUILDING_SHADOW SE PONE 1 POR DEFECTO (NO INTERSECCION) Y LUEGO SE ACTULIZA A 0 LOS QUE SI INTERSECTAN:
 
@@ -111,25 +140,6 @@ insert into it003l3_napoli_ua2012_vegetation (
    select nextval('it003l3_napoli_ua2012_vegetation_gid_seq'), ST_Perimeter(geom), ST_Area(geom)
    from "200km_10m_n20e46_class40"
 );
-
-
-GRASS
-=====
-0) sustituir en el script:
-echo "GISDBASE: /home/mario.nunez/script/grass" >>$GISRC
-echo "LOCATION_NAME: location" >>$GISRC
-echo "MAPSET: PERMANENT" >>$GISRC
-#echo "MAPSET: mapset" >>$GISRC
-1) crear carpetas:
-grass/location/mapset
-grass/location/PERMANENT
-2) ejecutar:
-grass74 -c /home/mario.nunez/script/grass/location
-3) copiar ficheros de http://trac.osgeo.org/grass/browser/grass/trunk/demolocation#PERMANENT 
-PROJ_UNITS
-PROJ_INFO
-WIND
-DEFAULT_WIND
 
 
 SELECCIONAR ESM RASTER A PARTIR DE LA INTERSECCION CON LOS DATOS DE URBAN ATLAS:
