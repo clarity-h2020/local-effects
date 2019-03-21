@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-LAYER="buildings"
+LAYER="built_up"
 CITY=$(echo "$1" | awk '{print toupper($0)}')
 
 FOLDER="data/"$CITY"/esm"
@@ -80,15 +80,6 @@ TRANSMISSIVITY=`grep -i -F [$LAYER] $PARAMETERS/transmissivity.dat | cut -f 2 -d
 VEGETATION_SHADOW=`grep -i -F [$LAYER] $PARAMETERS/vegetation_shadow.dat | cut -f 2 -d ' '`
 RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
 
-#extract UA bbox from ESM raster
-#echo "...Clipping ESM area..."
-#N=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 2 -d ')' | cut -f 4 -d ' '`
-#S=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 1 -d ')' | cut -f 3 -d ' '`
-#E=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 3 -d '(' | cut -f 1 -d ','`
-#W=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 2 -d '(' | cut -f 1 -d ','`
-#gdalwarp -te $W $S $E $N $FILE $NAME"_clipped.tif"
-#FILE=$NAME"_clipped.tif"
-
 #raster reclassification with treshold 45
 echo "...Reclassifying..."
 NODATA=`gdalinfo $FILE | grep 'NoData' | cut -f 2 -d '='`
@@ -150,12 +141,13 @@ psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD vegetatio
 psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD run_off_coefficient real DEFAULT "$RUNOFF_COEFFICIENT";"
 
 ######ADD HEIGHT
-######NEEDS TO BE CHANGED TO USE RASDAMAN EU_BUILDING_HEIGHT COLLECTION IN RASDAMAN ATOS INSTANCE
-######it is a raster so some kind of mean/average has to be calculated with values within each building geometry...
+HEIGHT_FILE="/home/mario.nunez/script/data/height/$CITY"_height".tif"
+if [ -f $HEIGHT_FILE ];
+then
+######TO-DO
 ######https://github.com/perrygeo/python-rasterstats
 echo "...Adding height data..."
-#psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD COLUMN height real DEFAULT null;"
-#psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" SET height = sub.height FROM (SELECT b.gid, AVG(CAST(h.altezza as real)) as height FROM public.\""$NAME"\" b, naples_height h WHERE ST_Intersects( b.geom , h.geom ) GROUP BY b.gid) sub WHERE public.\""$NAME"\".gid=sub.gid;"
+fi
 
 #building shadow 1 by default(not intersecting) then update with value 0 when intersecting
 echo "...Adding building shadow..."

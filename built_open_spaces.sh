@@ -76,15 +76,6 @@ SHP=`ogrinfo $FILE2 | grep '1:' | cut -f 2 -d ' '`
 NAME=$(echo $SHP"_"$LAYER | awk '{print tolower($0)}')
 DATA=$(echo $SHP"_layers9_12" | awk '{print tolower($0)}')
 
-#extract UA bbox from ESM raster
-#echo "...Clipping ESM area..."
-#N=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 2 -d ')' | cut -f 4 -d ' '`
-#S=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 1 -d ')' | cut -f 3 -d ' '`
-#E=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 3 -d '(' | cut -f 1 -d ','`
-#W=`ogrinfo -ro -so -al $FILE2 | grep "Extent" | cut -f 2 -d '(' | cut -f 1 -d ','`
-#gdalwarp -te $W $S $E $N $FILE $NAME"_clipped.tif"
-#FILE=$NAME"_clipped.tif"
-
 #raster reclassification with treshold 30
 TIF=$NAME"_calculated.TIF"
 SHP=$NAME"_calculated.shp"
