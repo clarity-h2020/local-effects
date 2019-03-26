@@ -27,6 +27,7 @@ psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD emissivity real DEFA
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD transmissivity real DEFAULT "$TRANSMISSIVITY";"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD vegetation_shadow real DEFAULT "$VEGETATION_SHADOW";"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD run_off_coefficient real DEFAULT "$RUNOFF_COEFFICIENT";"
+
 #building shadow 1 by default (not intersecting) and update with value 0 when interscting
 echo "...Adding building shadow..."
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD building_shadow smallint DEFAULT 1;"
