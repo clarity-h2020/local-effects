@@ -14,7 +14,7 @@ if [ ! "$FILE" ]; then
     echo "ERROR: City data not found!"
 else
 SHP=`ogrinfo $FILE | grep '1:' | cut -f 2 -d ' '`
-NAME=$(echo $SHP"_"$LAYER | awk '{print tolower($0)}')
+NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
 
 #PARAMETERS
 PARAMETERS="parameters"
@@ -25,7 +25,7 @@ RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cu
 
 #MEDIUM URBAN FABRIC (11220 discontinuous medium density urban fabric)
 #ogr2ogr -sql "SELECT area,perimeter FROM "$SHP" WHERE "$CODE"='11220'" $NAME $FILE
-ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP" WHERE "$CODE"='11220'" $NAME $FIL
+ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP" WHERE "$CODE"='11220'" $NAME $FILE
 shp2pgsql -k -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME".sql"
@@ -50,13 +50,14 @@ echo "...removing built open spaces intersections..."
 psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, b.geom)),3)) FROM "$CITY"_built_open_spaces b WHERE ST_Contains(x.geom, b.geom) OR ST_Overlaps(x.geom, b.geom);"
 
 #adding rest of the parameters
+echo "...Adding rest of parameters..."
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD albedo real DEFAULT "$ALBEDO";"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD emissivity real DEFAULT "$EMISSIVITY";"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD transmissivity real DEFAULT "$TRANSMISSIVITY";"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD run_off_coefficient real DEFAULT "$RUNOFF_COEFFICIENT";"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD fua_tunnel real DEFAULT "$FUA_TUNNEL";"
 
 #Clusterization
+echo "...Clusterizing..."
 #psql -U "postgres" -d "clarity" -c "CLUSTER public.\""$NAME"\" USING public.\""$NAME"\"_pkey;"
 
 #TAKE EVERYTHING FROM CITY TABLE TO GENERAL TABLE

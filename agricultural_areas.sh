@@ -26,8 +26,8 @@ RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cu
 
 #AGRICULTURAL AREAS (21000 arable land,22000 permanent crops,23000 pastures,24000 Complex and mixed cultivation patterns,25000 orchards)
 echo "...Extract Urban Atlas data..."
-#ogr2ogr -sql "SELECT area,perimeter,"$CODE" FROM "$SHP" WHERE "$CODE"='21000' OR "$CODE"='22000' OR "$CODE"='23000' OR "$CODE='24000' OR "$CODE"='25000'" $NAME $FILE
-ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter,"$CODE" FROM "$SHP" WHERE "$CODE"='20000'" $NAME $FILE
+#ogr2ogr -sql "SELECT area, perimeter FROM "$SHP" WHERE "$CODE"='21000' OR "$CODE"='22000' OR "$CODE"='23000' OR "$CODE='24000' OR "$CODE"='25000'" $NAME $FILE
+ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP" WHERE "$CODE"='20000'" $NAME $FILE
 shp2pgsql -k -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME.sql
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME.sql
@@ -43,7 +43,7 @@ psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_Collec
 echo "...removing trees intersections..."
 psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, t.geom)),3)) FROM "$CITY"_trees t WHERE ST_Contains(x.geom, t.geom) OR ST_Overlaps(x.geom, t.geom);"
 echo "...removing vegetation intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, a.geom)),3)) FROM "$CITY"_agricultural_areas a WHERE ST_Contains(x.geom, a.geom) OR ST_Overlaps(x.geom, a.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, v.geom)),3)) FROM "$CITY"_vegetation v WHERE ST_Contains(x.geom, v.geom) OR ST_Overlaps(x.geom, v.geom);"
 
 #add rest of the parameters
 echo "...Adding rest of parameters..."

@@ -10,16 +10,9 @@ fi
 CITY=$(echo "$1" | awk '{print toupper($0)}')
 FOLDER="data/"$CITY"/esm"
 FILE=`ls -la $FOLDER/class50_$CITY.tif | cut -f 10 -d ' '`
-#NAME2=`echo $FILE | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
-#NAME2=$(echo $NAME2 | awk '{print tolower($0)}')
 
-FOLDER2="data/"$CITY"/ua"
-FILE2=`ls -la $FOLDER2/*.shp | cut -f 9 -d ' '`
-SHP2=`ogrinfo $FILE2 | grep '1:' | cut -f 2 -d ' '`
 NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
-DATA=$(echo $CITY"_layers9_12" | awk '{print tolower($0)}')
-
-if [ ! "$FILE" ] || [ ! "$FILE2" ]; then
+if [ ! "$FILE" ]; then
     echo "ERROR: City data not found!"
 else
 
@@ -113,10 +106,10 @@ echo "...Exporting results to database..."
 shp2pgsql -k -s 3035 -I -d $SHP $NAME > $NAME.sql
 psql -d clarity -U postgres -f $NAME.sql
 rm $NAME"_calculated.TIF"
-rm $NAME"_calculated.prj"
-rm $NAME"_calculated.shx"
 rm $NAME"_calculated.shp"
 rm $NAME"_calculated.dbf"
+rm $NAME"_calculated.shx"
+rm $NAME"_calculated.prj"
 rm $NAME".sql"
 
 #remove intersections with previous layers
@@ -172,7 +165,7 @@ psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET fua_tunnel="
 #building shadow 1 by default(not intersecting) then update with value 0 when intersecting
 echo "...Adding building shadow..."
 psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD building_shadow smallint DEFAULT 1;"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$DATA" l WHERE ST_Intersects( x.geom , l.geom );"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$CITY"_layers9_12 l WHERE ST_Intersects( x.geom , l.geom );"
 
 #Clusterization
 echo "...Clusterizing..."
