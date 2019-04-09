@@ -4,7 +4,7 @@
 [trees] 0.05
 [vegetation] 0.18
 [agricultural_areas] 0.1
-[buildings] 0.9
+[built_up] 0.9
 [built_open_spaces] 0.75
 [dense_urban_fabric] 0.7
 [medium_urban_fabric] 0.5

@@ -1,0 +1,13 @@
+[default] 0
+dense_urban_trafic:
+[11100] 1
+[11210] 1
+medium_urban_fabric:
+[11220] 0.8
+low_urban_fabric:
+[11230] 0.5
+[11240] 0.5
+[11300] 0.5
+public_military_industrial:
+[12100] 0.5
+

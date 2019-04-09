@@ -12,41 +12,63 @@ BASINS_FOLDER="/home/mario.nunez/data/pluvial_floods/basins"
 STREAMS_FOLDER="/home/mario.nunez/data/pluvial_floods/streams"
 
 if [[ $# -eq 0 ]] ; then
-    echo "ERROR: No city name provided!"
+    echo -e "\e[33mERROR: No city name provided!\e[0m"
     exit 1
 fi
 CITY=$(echo "$1" | awk '{print toupper($0)}')
 CITY_low=$(echo "$1" | awk '{print tolower($0)}')
 if [ -f $UA_FOLDER/*_$CITY.zip ] && [ -f $STREAMS_FOLDER/streams.shp ] && [ -f $BASINS_FOLDER/basins.shp ];
 then
-	echo "It seems like" $CITY "is an available city in the file system, gathering data..."
+	echo -e "\e[36mIt seems like" $CITY "is an available city in the file system, gathering data...\e[0m"
 
 	#ALL THIS 3 LOADS ONLY HAS TO BE DONE ONCE, NOT FOR EACH CITY
 
 	#Create city table in postgresql if it does not exists
-	#psql -U "postgres" -d "clarity" -c "CREATE TABLE city( id SERIAL PRIMARY KEY, name VARCHAR(32), bbox GEOMETRY(Polygon,3035) );"
+	psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public.city');" > check.out
+	FOUND=`sed "3q;d" check.out | cut -f 2 -d ' '`
+        rm check.out
+        if [ -z $FOUND ];
+        then
+		echo -e "\e[36mCreating city table\e[0m"
+		psql -U "postgres" -d "clarity" -c "CREATE TABLE city( id SERIAL PRIMARY KEY, name VARCHAR(32),heat_wave BOOLEAN DEFAULT FALSE, pluvial_flood BOOLEAN DEFAULT FALSE, bbox GEOMETRY(Polygon,3035) );"
+	fi
 
-	#Create strams final table
-	#Lsql -U "postgres" -d "clarity" -c "CREATE TABLE streams(gid integer PRIMARY KEY,stream_typ character varying(254) COLLATE pg_catalog.\"default\",\"Shape_Leng\" numeric,geom geometry(LineString,3035), start_height numeric, end_height numeric);"
+	#Create streams final table
+	psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public.streams');" > check.out
+        FOUND=`sed "3q;d" check.out | cut -f 2 -d ' '`
+        rm check.out
+        if [ -z $FOUND ];
+        then
+		echo -e "\e[36mCreating streams table\e[0m"
+		psql -U "postgres" -d "clarity" -c "CREATE TABLE streams(gid integer PRIMARY KEY,stream_typ character varying(254) COLLATE pg_catalog.\"default\",\"Shape_Leng\" numeric,geom geometry(LineString,3035), start_height numeric, end_height numeric);"
+	fi
 	#loading complete STREAMS geometries into database
-	#shp2pgsql -k -s 3035 -I $STREAMS_FOLDER/streams.shp "streams_europe" > $STREAMS_FOLDER/streams.sql
-	#psql -d clarity -U postgres -f $STREAMS_FOLDER/streams.sql
+	##shp2pgsql -k -s 3035 -I $STREAMS_FOLDER/streams.shp "streams_europe" > $STREAMS_FOLDER/streams.sql
+	##psql -d clarity -U postgres -f $STREAMS_FOLDER/streams.sql
 
 	#Create basins final table
-	#psql -U "postgres" -d "clarity" -c "CREATE TABLE basins(gid integer PRIMARY KEY,\"AREA_KM2\" numeric,\"SHAPE_Leng\" numeric,\"SHAPE_Area\" numeric,geom geometry(MultiPolygon,3035));"
+	psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public.basins');" > check.out
+        FOUND=`sed "3q;d" check.out | cut -f 2 -d ' '`
+        rm check.out
+        if [ -z $FOUND ];
+        then
+		echo -e "\e[36mCreating basins table\e[0m"
+		psql -U "postgres" -d "clarity" -c "CREATE TABLE basins(gid integer PRIMARY KEY,\"AREA_KM2\" numeric,\"SHAPE_Leng\" numeric,\"SHAPE_Area\" numeric,geom geometry(MultiPolygon,3035));"
+	fi
 	#Loading complete BASINS geometries into database
-        #shp2pgsql -k -s 3035 -I -W "latin1" $BASINS_FOLDER/basins.shp "basins_europe" > $BASINS_FOLDER/basins.sql
-        #psql -d clarity -U postgres -f $BASINS_FOLDER/basins.sql
+        ##shp2pgsql -k -s 3035 -I -W "latin1" $BASINS_FOLDER/basins.shp "basins_europe" > $BASINS_FOLDER/basins.sql
+        ##psql -d clarity -U postgres -f $BASINS_FOLDER/basins.sql
 
 	#checking provided city exists already in database
-	psql -U "postgres" -d "clarity" -c "SELECT EXISTS(SELECT * FROM city WHERE UPPER(name)=UPPER('"$CITY"'));" > city.out
+	psql -U "postgres" -d "clarity" -c "SELECT pluvial_flood FROM city WHERE UPPER(name)=UPPER('"$CITY"');" > city.out
 	FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`
 	rm city.out
 	if [ $FOUND == 't' ];
 	then
-		echo "ERROR: "$CITY" is already loaded into the database!"
+		echo -e "\e[33mERROR: "$CITY" pluvial flood already loaded into the database!\e[0m"
+		echo -e "\e[33mTry removing NAPOLI registry from city table or setting up pluvial_flood attribute to false\e[0m"
 	else
-		echo "Loading "$CITY" data..."
+		echo -e "\e[36mLoading pluvial flood "$CITY" data...\e[0m"
 
 		#create city folder
         	mkdir -p $DATA/$CITY
@@ -69,17 +91,27 @@ then
 	        XMIN=`ogrinfo -ro -so -al $DATA/ua/$NAME"_"$UA_VERSION_FILE".shp" | grep "Extent" | cut -f 2 -d '(' | cut -f 1 -d ','`
 
 		#LOAD CITY INTO DATABASE WITH ITS BBOX
-		echo $CITY "BBOX" $XMAX $YMAX $XMIN $YMIN
-		psql -U "postgres" -d "clarity" -c "INSERT INTO city (name,bbox) VALUES (UPPER('"$CITY"'), ST_MakeEnvelope("$XMIN","$YMIN","$XMAX","$YMAX",3035));"
+		echo -e "\e[36m"$CITY "BBOX" $XMAX $YMAX $XMIN $YMIN"\e[0m"
+		psql -U "postgres" -d "clarity" -c "SELECT EXISTS(SELECT * FROM city WHERE UPPER(name)=UPPER('"$CITY"'));" > city.out
+		FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`
+		rm city.out
+		if [ $FOUND == 't' ];
+		then
+			#as city already exists in database just set pluvial_flood data to true since now there is pluvial_flood data
+			psql -U "postgres" -d "clarity" -c "UPDATE city SET pluvial_flood=true;"
+		else
+			#as city is not in database, it has to be created a new register for it with pluvial_flood data true
+			psql -U "postgres" -d "clarity" -c "INSERT INTO city (name,heat_wave,pluvial_flood,bbox) VALUES (UPPER('"$CITY"'),false,true, ST_MakeEnvelope("$XMIN","$YMIN","$XMAX","$YMAX",3035));"
+		fi
 
 		#BASINS
-		echo "...Extract basins..."
+		echo -e "\e[36m...Extract basins...\e[0m"
 		#create table insert into cogiendo lo que intersecta
 		psql -U "postgres" -d "clarity" -c "CREATE TABLE basins_"$CITY"(gid integer PRIMARY KEY,\"AREA_KM2\" numeric,\"SHAPE_Leng\" numeric,\"SHAPE_Area\" numeric,geom geometry(MultiPolygon,3035));"
 		psql -U "postgres" -d "clarity" -c "INSERT INTO basins_"$CITY"(SELECT b.gid,b.\"AREA_KM2\",b.\"SHAPE_Leng\",b.\"SHAPE_Area\",b.geom FROM basins_europe b, city c WHERE ST_Intersects(b.geom,c.bbox) and c.name='"$CITY"');"
 
 		#Clusterization
-		echo "...Clusterizing basins..."
+		#echo -e "\e[36m...Clusterizing basins...\e[0m"
 		#psql -U "postgres" -d "clarity" -c "CLUSTER basins USING basins_pkey;"
 
 		#FALTA VOLCAR SOBRE TABLA GLOBAL Y BORRAR LA TABLA DEL SHAPEFILE DE LA CIUDAD ACTUAL
@@ -87,7 +119,7 @@ then
 		psql -U "postgres" -d "clarity" -c "DROP TABLE basins_"$CITY_low";"
 
 		#STREAMS
-	        echo "...Extract streams..."
+	        echo -e "\e[36m...Extract streams...\e[0m"
 		#create table insert into cogiendo lo que intersecta
 		psql -U "postgres" -d "clarity" -c "CREATE TABLE streams_"$CITY"(gid integer PRIMARY KEY,stream_typ character varying(254) COLLATE pg_catalog.\"default\",\"Shape_Leng\" numeric,geom geometry(LineString,3035));"
 		psql -U "postgres" -d "clarity" -c "INSERT INTO streams_"$CITY"(SELECT s.gid,s.stream_typ,s.\"Shape_Leng\",ST_LineMerge(s.geom) FROM streams_europe s, city c WHERE ST_Intersects(s.geom,c.bbox) and c.name='"$CITY"');"
@@ -97,7 +129,7 @@ then
 		YMIN=`psql -U "postgres" -d "clarity" -c "SELECT ST_Extent(geom) as extent FROM streams_napoli;" | grep 'BOX' | cut -f 1 -d ',' | cut -f 2 -d '(' | cut -f 2 -d ' '`
 		XMAX=`psql -U "postgres" -d "clarity" -c "SELECT ST_Extent(geom) as extent FROM streams_napoli;" | grep 'BOX' | cut -f 2 -d ',' | cut -f 1 -d ')' | cut -f 1 -d ' '`
 		YMAX=`psql -U "postgres" -d "clarity" -c "SELECT ST_Extent(geom) as extent FROM streams_napoli;" | grep 'BOX' | cut -f 2 -d ',' | cut -f 1 -d ')' | cut -f 2 -d ' '`
-		echo "BBOX:" $XMIN $YMIN $XMAX $YMAX
+		echo -e "\e[36mBBOX:" $XMIN $YMIN $XMAX $YMAX"\e[0m"
 		XMIN=`echo $XMIN | cut -f 1 -d '.'`
 		XMIN=$((XMIN-200))
 		YMIN=`echo $YMIN | cut -f 1 -d '.'`
@@ -106,10 +138,10 @@ then
 		XMAX=$((XMAX+200))
 		YMAX=`echo $YMAX | cut -f 1 -d '.'`
 		YMAX=$((YMAX+200))
-		echo "BBOX EXTENDED:" $XMIN $YMIN $XMAX $YMAX
+		echo -e "\e[36mBBOX EXTENDED:" $XMIN $YMIN $XMAX $YMAX"\e[0m"
 
 		#DEM
-                echo "Generating Digital Elevation Model map..."
+                echo -e "\e[36mGenerating Digital Elevation Model map...\e[0m"
                 mkdir $DATA/dem
                 gdal_translate -projwin $XMIN $YMAX $XMAX $YMIN $DEM_FOLDER/eu_dem.vrt $DATA/dem/dem_$CITY.tif
                 raster2pgsql -I -C -s 3035 -M $DATA/dem/dem_$CITY.tif dem_$CITY > dem_$CITY.sql
@@ -117,14 +149,14 @@ then
                 rm dem_$CITY.sql
 
 		#Calculate ends height with DEM
-                echo "...getting ends height..."
+                echo -e "\e[36m...getting ends height...\e[0m"
 		psql -U "postgres" -d "clarity" -c "ALTER TABLE streams_"$CITY" ADD COLUMN start_height numeric;"
 		psql -U "postgres" -d "clarity" -c "ALTER TABLE streams_"$CITY" ADD COLUMN end_height numeric;"
 		psql -U "postgres" -d "clarity" -c "UPDATE streams_"$CITY" SET start_height=ST_Value(rast, ST_StartPoint(geom),false) FROM dem_"$CITY" WHERE ST_Intersects(geom,ST_Envelope(rast));"
 		psql -U "postgres" -d "clarity" -c "UPDATE streams_"$CITY" SET end_height=ST_Value(rast, ST_EndPoint(geom),false) FROM dem_"$CITY" WHERE ST_Intersects(geom,ST_Envelope(rast));"
 		psql -U "postgres" -d "clarity" -c "DROP TABLE dem_"$CITY";"
 		#Clusterization
-		echo "...Clusterizing streams..."
+		#echo -e "\e[36m...Clusterizing streams...\e[0m"
 		#psql -U "postgres" -d "clarity" -c "CLUSTER streams USING streams_pkey;"
 
 		#FALTA VOLCAR SOBRE TABLA GLOBAL Y BORRAR LA TABLA DEL SHAPEFILE DE LA CIUDAD ACTUAL
@@ -133,17 +165,15 @@ then
 
 		#delete city data
 	        rm -r $DATA
-	        echo "Generation completed for "$CITY
+	        echo -e "\e[36mGeneration completed for "$CITY"\e[0m"
 	fi
 else
-	echo "ERROR: No data avaiable in the file system for "$CITY"!"
-	echo "Unable to generate input layers for pluvial floods local effects."
+	echo -e "\e[33mERROR: No data avaiable in the file system for "$CITY"!\e[0m"
+	echo -e "\e[33mUnable to generate input layers for pluvial floods local effects.\e[0m"
 fi
 
 #TO RUN IT AGAIN FROM THE VERY BEGINNING
-#psql -U "postgres" -d "clarity" -c "DELETE FROM city;"
-#psql -U "postgres" -d "clarity" -c "ALTER SEQUENCE city_id_seq RESTART WITH 1;"
-#psql -U "postgres" -d "clarity" -c "DELETE FROM basins;"
-#psql -U "postgres" -d "clarity" -c "ALTER SEQUENCE basins_id_seq RESTART WITH 1;"
-#psql -U "postgres" -d "clarity" -c "DELETE FROM streams;"
-#psql -U "postgres" -d "clarity" -c "ALTER SEQUENCE streams_id_seq RESTART WITH 1;"
+#DROP TABLE basins;
+#DROP TABLE streams;
+#UPDATE city SET pluvial_flood=false WHERE name='NAPOLI';
+
