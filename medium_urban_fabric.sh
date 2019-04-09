@@ -26,28 +26,28 @@ RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cu
 #MEDIUM URBAN FABRIC (11220 discontinuous medium density urban fabric)
 #ogr2ogr -sql "SELECT area,perimeter FROM "$SHP" WHERE "$CODE"='11220'" $NAME $FILE
 ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP" WHERE "$CODE"='11220'" $NAME $FIL
-shp2pgsql -k -s 3035 -S -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
+shp2pgsql -k -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME".sql"
 rm $NAME".sql"
 
 #remove intersections with previous layers
 echo "...removing water intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
 echo "...removing roads intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing railways intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing trees intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_trees t WHERE ST_Contains(x.geom, t.geom) OR ST_Overlaps(x.geom, t.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, t.geom)),3)) FROM "$CITY"_trees t WHERE ST_Contains(x.geom, t.geom) OR ST_Overlaps(x.geom, t.geom);"
 echo "...removing vegetation intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_vegetation v WHERE ST_Contains(x.geom, v.geom) OR ST_Overlaps(x.geom, v.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, v.geom)),3)) FROM "$CITY"_vegetation v WHERE ST_Contains(x.geom, v.geom) OR ST_Overlaps(x.geom, v.geom);"
 echo "...removing agricultural areas intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_agricultural_areas a WHERE ST_Contains(x.geom, a.geom) OR ST_Overlaps(x.geom, a.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, a.geom)),3)) FROM "$CITY"_agricultural_areas a WHERE ST_Contains(x.geom, a.geom) OR ST_Overlaps(x.geom, a.geom);"
 echo "...removing built up intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_built_up b WHERE ST_Contains(x.geom, b.geom) OR ST_Overlaps(x.geom, b.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, b.geom)),3)) FROM "$CITY"_built_up b WHERE ST_Contains(x.geom, b.geom) OR ST_Overlaps(x.geom, b.geom);"
 echo "...removing built open spaces intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_built_open_spaces b WHERE ST_Contains(x.geom, b.geom) OR ST_Overlaps(x.geom, b.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, b.geom)),3)) FROM "$CITY"_built_open_spaces b WHERE ST_Contains(x.geom, b.geom) OR ST_Overlaps(x.geom, b.geom);"
 
 #adding rest of the parameters
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD albedo real DEFAULT "$ALBEDO";"

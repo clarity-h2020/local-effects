@@ -79,7 +79,7 @@ RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cu
 echo "...Extract Urban Atlas data..."
 #ogr2ogr -sql "SELECT area,perimeter FROM "$SHP" WHERE "$CODE"='14100' OR "$CODE"='14200' OR "$CODE"='32000' OR "$CODE"='33000'" $NAME $FILE
 ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP" WHERE "$CODE"='14100' OR "$CODE"='14200' OR "$CODE"='32000' OR "$CODE"='33000'" $NAME $FILE
-shp2pgsql -s 3035 -I -S -d $NAME/$SHP.shp $NAME > $NAME".sql"
+shp2pgsql -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME".sql"
 rm $NAME".sql"
@@ -114,25 +114,29 @@ r.external input="$TIF" band=1 output=rast_5bd8903d0a6372 --overwrite -o
 g.region n=$N s=$S e=$E w=$W res=$RES
 r.to.vect input=rast_5bd8903d0a6372 type="area" column="value" output=output08aad7e15cf0402da3436e32ac40c6c9 --overwrite
 v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP2" format="ESRI_Shapefile" --overwrite
+#
+rm $TIF
 
 #result to databse
 echo "...Exporting ESM result to database..."
-shp2pgsql -k -s 3035 -S -I -d $SHP2 $NAME2 > $NAME2.sql
+shp2pgsql -k -s 3035 -I -d $SHP2 $NAME2 > $NAME2.sql
 psql -d clarity -U postgres -f $NAME2.sql
 rm $NAME2.*
+#
+rm $NAME"_calculated".*
 echo "...adding previosuly extracted UA data..."
 psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq'), ST_Perimeter(geom), ST_Area(geom) FROM public.\""$NAME2"\");"
 psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME2"\";"
 
 #remove intersections with previous layers
 echo "...removing water intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
 echo "...removing roads intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing railways intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_railways r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing trees intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_trees t WHERE ST_Contains(x.geom, t.geom) OR ST_Overlaps(x.geom, t.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, t.geom)),3)) FROM "$CITY"_trees t WHERE ST_Contains(x.geom, t.geom) OR ST_Overlaps(x.geom, t.geom);"
 
 #adding rest of the parameters
 echo "...Adding rest of parameters..."
@@ -153,7 +157,7 @@ psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET fua_tunnel="
 #building shadow 1 by default(not interseccting) then update with value 0 when intersecting
 echo "...Adding building shadow..."
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD building_shadow smallint DEFAULT 1;"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$CITY"_layers9_12 l WHERE ST_Intersects( x.geom , l.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$CITY"_layers9_12 l WHERE ST_Intersects( x.geom , l.geom );"
 
 #Clusterization
 echo "...Clusterizying..."

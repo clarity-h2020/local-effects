@@ -28,7 +28,7 @@ else
 #WATCH OUT CODE IS (31000 in UA2012 but it is 30000 in UA 2006)
 echo "...Extract Urban Atlas data..."
 ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP_UA" WHERE "$CODE"='30000'" $NAME"_UA" $FILE_UA
-shp2pgsql -k -s 3035 -S -I -d $NAME"_UA"/$SHP_UA.shp $NAME > $NAME"_UA.sql"
+shp2pgsql -k -s 3035 -I -d $NAME"_UA"/$SHP_UA.shp $NAME > $NAME"_UA.sql"
 rm -r $NAME"_UA"
 psql -d clarity -U postgres -f $NAME"_UA.sql"
 rm $NAME"_UA.sql"
@@ -36,7 +36,7 @@ rm $NAME"_UA.sql"
 #trees STL
 echo "...Extract STL data..."
 ogr2ogr -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP_STL" WHERE STL=1" $NAME"_STL" $FILE_STL
-shp2pgsql -k -s 3035 -S -I -a $NAME"_STL"/$SHP_STL.shp $NAME > $NAME"_STL.sql"
+shp2pgsql -k -s 3035 -I -a $NAME"_STL"/$SHP_STL.shp $NAME > $NAME"_STL.sql"
 rm -r $NAME"_STL"
 psql -d clarity -U postgres -f $NAME"_STL.sql"
 rm $NAME"_STL.sql"
@@ -51,11 +51,11 @@ RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cu
 
 #remove intersections with previous layers
 echo "...removing water intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
 echo "...removing roads intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing railways intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" x USING "$CITY"_railways r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
 
 #adding rest of parameters
 echo "...Adding rest of parameters..."
@@ -76,7 +76,7 @@ psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET fua_tunnel="
 #building shadow 1 by default(not intersecting) then update with value 0 when intersecting
 echo "...Adding building shadow..."
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD building_shadow smallint DEFAULT 1;"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$CITY"_layers9_12 l WHERE ST_Intersects( x.geom , l.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$CITY"_layers9_12 l WHERE ST_Intersects( x.geom , l.geom );"
 
 ###HILLSHADE GREEN FRACTION, we do not know where to get tree type... so we set default value 0.37
 echo "...Adding hillshade green fraction..."

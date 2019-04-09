@@ -109,7 +109,8 @@ v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SH
 
 #result to databse
 echo "loading poligonization into database"
-shp2pgsql -k -s 3035 -S -I -d $SHP $NAME > $NAME.sql
+#shp2pgsql -k -s 3035 -S -I -d $SHP $NAME > $NAME.sql
+shp2pgsql -k -s 3035 -I -d $SHP $NAME > $NAME.sql
 psql -d clarity -U postgres -f $NAME.sql
 rm $NAME"_calculated.TIF"
 #rm $NAME"_calculated.prj"
@@ -121,19 +122,19 @@ rm $NAME".sql"
 
 #remove intersections with previous layers
 echo "...removing water intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM public.\""$NAME"\" x USING "$CITY"_water w WHERE ST_Intersects( x.geom , w.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
 echo "...removing roads intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM public.\""$NAME"\" x USING "$CITY"_roads r WHERE ST_Intersects( x.geom , r.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing railways intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM public.\""$NAME"\" x USING "$CITY"_railways r WHERE ST_Intersects( x.geom , r.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing trees intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM public.\""$NAME"\" x USING "$CITY"_trees t WHERE ST_Intersects( x.geom , t.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, t.geom)),3)) FROM "$CITY"_trees t WHERE ST_Contains(x.geom, t.geom) OR ST_Overlaps(x.geom, t.geom);"
 echo "...removing vegetation intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM public.\""$NAME"\" x USING "$CITY"_vegetation v WHERE ST_Intersects( x.geom , v.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, v.geom)),3)) FROM "$CITY"_vegetation v WHERE ST_Contains(x.geom, v.geom) OR ST_Overlaps(x.geom, v.geom);"
 echo "...removing agricultural areas intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM public.\""$NAME"\" x USING "$CITY"_agricultural_areas a WHERE ST_Intersects( x.geom , a.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, a.geom)),3)) FROM "$CITY"_agricultural_areas a WHERE ST_Contains(x.geom, a.geom) OR ST_Overlaps(x.geom, a.geom);"
 echo "...removing built up intersections..."
-psql -U "postgres" -d "clarity" -c "DELETE FROM public.\""$NAME"\" USING "$CITY"_built_up b WHERE ST_Intersects( x.geom , b.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, b.geom)),3)) FROM "$CITY"_built_up b WHERE ST_Contains(x.geom, b.geom) OR ST_Overlaps(x.geom, b.geom);"
 
 #drop not needed columns
 echo "dropping not needed columns"
@@ -168,26 +169,26 @@ psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET fua_tunnel="
 #building shadow 1 by default(not intersecting) then update with value 0 when intersecting
 echo "adding building shadow"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD building_shadow smallint DEFAULT 1;"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$DATA" l WHERE ST_Intersects( x.geom , l.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$DATA" l WHERE ST_Intersects( x.geom , l.geom );"
 
 echo "adding hillshade building"
 #hillshade_building 1 by default then update depending on intersections
 psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD hillshade_building real DEFAULT 1;"
 #hillshade_building intersection with public_military_industrial(CODE=12100)
 VALUE=`grep -i -F [public_military_industrial] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='12100' AND ST_Intersects( x.geom , l.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='12100' AND ST_Intersects( x.geom , l.geom );"
 #hillshade_building intersection with low_urban_fabric(CODE=11230,11240,11300)
 VALUE=`grep -i -F [low_urban_fabric] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11230' AND ST_Intersects( x.geom , l.geom ) IS TRUE;"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11240' AND ST_Intersects( x.geom , l.geom ) IS TRUE;"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11300' AND ST_Intersects( x.geom , l.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11230' AND ST_Intersects( x.geom , l.geom );"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11240' AND ST_Intersects( x.geom , l.geom );"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11300' AND ST_Intersects( x.geom , l.geom );"
 #hillshade_building intersection with medium_urban_fabric(CODE=11220)
 VALUE=`grep -i -F [medium_urban_fabric] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11220' AND ST_Intersects( x.geom , l.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11220' AND ST_Intersects( x.geom , l.geom );"
 #hillshade_building intersection with dense_urban_fabric(CODE=11210,11100)
 VALUE=`grep -i -F [dense_urban_fabric] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11210' AND ST_Intersects( x.geom , l.geom ) IS TRUE;"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11100' AND ST_Intersects( x.geom , l.geom ) IS TRUE;"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11210' AND ST_Intersects( x.geom , l.geom );"
+psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$DATA" l WHERE l."$CODE"='11100' AND ST_Intersects( x.geom , l.geom );"
 
 #Clusterization
 #echo "clusterizing table..."
