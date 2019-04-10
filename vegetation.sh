@@ -17,6 +17,14 @@ SHP=`ogrinfo $FILE | grep '1:' | cut -f 2 -d ' '`
 #NAME=$(echo $SHP"_"$LAYER | awk '{print tolower($0)}')
 NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
 
+#ESM RASTER
+FOLDER2="data/"$CITY"/esm"
+FILE2=`ls -la $FOLDER2/class40_$CITY.tif | cut -f 10 -d ' '`
+NAME2=`echo $FILE2 | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
+NAME2=$(echo $NAME2 | awk '{print tolower($0)}')
+TIF=$NAME"_calculated.TIF"
+SHP2=$NAME"_calculated.shp"
+
 ###############
 # GRASS SETUP #
 ###############
@@ -75,7 +83,7 @@ TRANSMISSIVITY=`grep -i -F [$LAYER] $PARAMETERS/transmissivity.dat | cut -f 2 -d
 VEGETATION_SHADOW=`grep -i -F [$LAYER] $PARAMETERS/vegetation_shadow.dat | cut -f 2 -d ' '`
 RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
 
-#URBAN ATLAS (14100 gren urban areas, 14200 sport and leisure facilities, 32000 herbaceous vegetation, 33000 Open spaces with little or no vegetations)
+#URBAN ATLAS (14100 green urban areas, 14200 sport and leisure facilities, 32000 herbaceous vegetation, 33000 Open spaces with little or no vegetations)
 echo "...Extract Urban Atlas data..."
 #ogr2ogr -sql "SELECT area,perimeter FROM "$SHP" WHERE "$CODE"='14100' OR "$CODE"='14200' OR "$CODE"='32000' OR "$CODE"='33000'" $NAME $FILE
 ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP" WHERE "$CODE"='14100' OR "$CODE"='14200' OR "$CODE"='32000' OR "$CODE"='33000'" $NAME $FILE
@@ -83,13 +91,6 @@ shp2pgsql -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME".sql"
 rm $NAME".sql"
-
-#ESM RASTER
-FOLDER2="data/"$CITY"/esm"
-FILE2=`ls -la $FOLDER2/class40_$CITY.tif | cut -f 10 -d ' '`
-NAME2=`echo $FILE2 | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
-TIF=$NAME"_calculated.TIF"
-SHP2=$NAME"_calculated.shp"
 
 #raster reclassification with treshold 25
 echo "...Reclassifying ESM data..."
@@ -114,16 +115,16 @@ r.external input="$TIF" band=1 output=rast_5bd8903d0a6372 --overwrite -o
 g.region n=$N s=$S e=$E w=$W res=$RES
 r.to.vect input=rast_5bd8903d0a6372 type="area" column="value" output=output08aad7e15cf0402da3436e32ac40c6c9 --overwrite
 v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP2" format="ESRI_Shapefile" --overwrite
-#
 rm $TIF
 
 #result to databse
 echo "...Exporting ESM result to database..."
 shp2pgsql -k -s 3035 -I -d $SHP2 $NAME2 > $NAME2.sql
+rm $NAME"_calculated".*
 psql -d clarity -U postgres -f $NAME2.sql
 rm $NAME2.*
-#
-rm $NAME"_calculated".*
+
+#Putting together ESM and UA extracted data
 echo "...adding previosuly extracted UA data..."
 psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq'), ST_Perimeter(geom), ST_Area(geom) FROM public.\""$NAME2"\");"
 psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME2"\";"
