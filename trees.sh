@@ -51,11 +51,11 @@ RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cu
 
 #remove intersections with previous layers
 echo "...removing water intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(w.geom, x.geom) OR ST_Overlaps(x.geom, w.geom);"
 echo "...removing roads intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(r.geom, x.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing railways intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(r.geom, x.geom) OR ST_Overlaps(x.geom, r.geom);"
 
 #adding rest of parameters
 echo "...Adding rest of parameters..."

@@ -2,7 +2,8 @@
 
 CITY=$(echo "$1" | awk '{print toupper($0)}')
 FOLDER="data/"$CITY"/ua"
-FILE=`ls -la $FOLDER/*.shp | cut -f 10 -d ' '`
+#FILE=`ls -la $FOLDER/*.shp | cut -f 10 -d ' '`
+FILE=`ls $FOLDER/*.shp`
 if [ ! "$FILE" ]; then
     echo "ERROR: City data not found!"
 else

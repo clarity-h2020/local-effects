@@ -21,26 +21,16 @@ CITY=$(echo "$1" | awk '{print toupper($0)}')
 if [ -f $UA_FOLDER/*$CITY* ] && [ -f $STL_FOLDER/*$CITY* ];
 #&& [ -f $HEIGHT_FOLDER/*$CITY* ];
 then
-	echo -e "\e[36mGathering input data sources...\e[0m"
+	echo -e "\e[36mIt seems like" $CITY "is an available city in the file system, gathering data...\e[0m"
 
-	#THIS LOAD ONLY HAS TO BE DONE ONCE, NOT FOR EACH CITY
-        #Create city table in postgresql if it does not exists
-	psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public.city');" > city.out
-        FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`
-        rm city.out
-        if [ $FOUND != 'city' ];
-        then
-	        psql -U "postgres" -d "clarity" -c "CREATE TABLE city( id SERIAL PRIMARY KEY, name VARCHAR(32), heat_wave BOOLEAN DEFAULT FALSE, pluvial_flood BOOLEAN DEFAULT FALSE, bbox GEOMETRY(Polygon,3035) );"
-	fi
-
-	#checking provided city exists already in database
+	#checking provided city heat wave is already loaded in database
         psql -U "postgres" -d "clarity" -c "SELECT heat_wave FROM city WHERE UPPER(name)=UPPER('"$CITY"');" > city.out
         FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`
         rm city.out
 	if [ $FOUND == 't' ];
         then
 		echo -e "\e[33mERROR: "$CITY" heat wave data already loaded into the database!\e[0m"
-		echo -e "\e[33mTry removing NAPOLI registry from city table or setting up heat_wave attribute to false\e[0m"
+		echo -e "\e[33mTry setting up heat_wave "$CITY" attribute to false\e[0m"
         else
                 echo -e "\e[36mLoading heat wave "$CITY" data...\e[0m"
 
@@ -52,7 +42,8 @@ then
 	        echo -e "\e[36mGenerating Urban Atlas data...\e[0m"
 	        mkdir $DATA/ua
 	        ZIP=`ls $UA_FOLDER/*$CITY*`
-	        NAME=`echo $ZIP | cut -f 7 -d '/' | cut -f 1 -d '.' | cut -f 1,2 -d '_'`
+	        NAME=`echo $ZIP | cut -f 7 -d '/' | cut -f 1 -d '.' | cut -f 1-5 -d '_'`
+		CODE=`echo $NAME | cut -f 1 -d '_'`
 	        unzip $ZIP -d $DATA/ua
 	        cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE".shp" $DATA/ua/
 	        cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE".shx" $DATA/ua/
@@ -65,20 +56,6 @@ then
 		MINY=`ogrinfo -ro -so -al $DATA/ua/$NAME"_"$UA_VERSION_FILE".shp" | grep "Extent" | cut -f 1 -d ')' | cut -f 3 -d ' '`
 		MAXX=`ogrinfo -ro -so -al $DATA/ua/$NAME"_"$UA_VERSION_FILE".shp" | grep "Extent" | cut -f 3 -d '(' | cut -f 1 -d ','`
 		MINX=`ogrinfo -ro -so -al $DATA/ua/$NAME"_"$UA_VERSION_FILE".shp" | grep "Extent" | cut -f 2 -d '(' | cut -f 1 -d ','`
-
-		#LOAD CITY INTO DATABASE WITH ITS BBOX
-	        echo -e "\e[36m"$CITY "BBOX" $MAXX $MAXY $MINX $MINY"\e[0m"
-		psql -U "postgres" -d "clarity" -c "SELECT EXISTS(SELECT * FROM city WHERE UPPER(name)=UPPER('"$CITY"'));" > city.out
-                FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`
-                rm city.out
-                if [ $FOUND == 't' ];
-                then
-			#as city already exists in database just set heat_wave data to true since now there is heat_wave data
-                        psql -U "postgres" -d "clarity" -c "UPDATE city SET heat_wave=true;"
-                else
-			#as city is not in database, it has to be created a new register for it with heat_wave data true
-                        psql -U "postgres" -d "clarity" -c "INSERT INTO city (name,heat_wave,pluvial_flood,bbox) VALUES (UPPER('"$CITY"'),true,false,ST_MakeEnvelope("$XMIN","$YMIN","$XMAX","$YMAX",3035));"
-                fi
 
 		#ESM
 		echo -e "\e[36mGenerating and clipping European Setlement Map data...\e[0m"
@@ -93,7 +70,7 @@ then
 		mkdir $DATA/stl
 		#locate and unzip STL city data
 		ZIP=`ls $STL_FOLDER/*$CITY*`
-	        NAME=`echo $ZIP | cut -f 7 -d '/' | cut -f 1 -d '.' | cut -f 1,2 -d '_'`
+	        NAME=`echo $ZIP | cut -f 7 -d '/' | cut -f 1 -d '.' | cut -f 1-5 -d '_'`
 	        unzip $ZIP -d $DATA/stl
 		#copying STL city SHP file
 	        cp $DATA/stl/$NAME/Shapefiles/$NAME"_UA2012_STL.shp" $DATA/stl/
@@ -117,6 +94,9 @@ then
 		#GENERATE LAYERS 9-12 TOGETHER
 		source layers9_12.sh $CITY
 		wait
+
+		#REGISTER THAT NEEDED DATA IS PREPARED FOR THE CITY
+		psql -U "postgres" -d "clarity" -c "UPDATE CITY SET heat_wave=TRUE WHERE NAME='"$CITY"';"
 
 		#GENERATE 12 LAYERS
 		#run each script in corresponding order

@@ -126,18 +126,18 @@ rm $NAME2.*
 
 #Putting together ESM and UA extracted data
 echo "...adding previosuly extracted UA data..."
-psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq'), ST_Perimeter(geom), ST_Area(geom) FROM public.\""$NAME2"\");"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq'), ST_Perimeter(geom), ST_Area(geom), geom FROM public.\""$NAME2"\");"
 psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME2"\";"
 
 #remove intersections with previous layers
 echo "...removing water intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(x.geom, w.geom) OR ST_Overlaps(x.geom, w.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(w.geom, x.geom) OR ST_Overlaps(x.geom, w.geom);"
 echo "...removing roads intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(r.geom, x.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing railways intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(x.geom, r.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(r.geom, x.geom) OR ST_Overlaps(x.geom, r.geom);"
 echo "...removing trees intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, t.geom)),3)) FROM "$CITY"_trees t WHERE ST_Contains(x.geom, t.geom) OR ST_Overlaps(x.geom, t.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, t.geom)),3)) FROM "$CITY"_trees t WHERE ST_Contains(t.geom, x.geom) OR ST_Overlaps(x.geom, t.geom);"
 
 #adding rest of the parameters
 echo "...Adding rest of parameters..."
