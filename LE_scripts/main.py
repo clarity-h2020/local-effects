@@ -6,6 +6,7 @@ import math
 city = 'Naples'
 '''
 DATA DEPENDENT ON NAPLES
+These should come from the DB or the CSIS or some place where this configuration is stored
 T_a = 305.15 K #32C for a certain heat wave instensity, will change for different cities and
  scenarios
 epsilon_sky = 0.0028 * (T_a - 273.15) + 0.787
