@@ -1,0 +1,147 @@
+{
+    "Water": {
+        "albedo": 0.07,
+        "surface emissivity": 0.96,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.5,
+        "vegetation shadow": 0,
+        "building shadow": 0,
+        "hillshade building": 0,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": -2
+    },
+    "Roads": {
+        "albedo": 0.1,
+        "surface emissivity": 0.9,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.15,
+        "vegetation shadow": 0,
+        "building shadow": 0,
+        "hillshade building": 0.8,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 18
+    },	
+    "Railways": {
+        "albedo": 0.2,
+        "surface emissivity": 0.85,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.15,
+        "vegetation shadow": 0,
+        "building shadow": 0,
+        "hillshade building": 0,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 12
+    },
+    "Trees": {
+        "albedo": 0.13,
+        "surface emissivity": 0.97,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.25,
+        "vegetation shadow": 1,
+        "building shadow": 0,
+        "hillshade building": 0,
+        "hillshade green": 0.37,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 2
+    },
+    "Vegetation": {
+        "albedo": 0.21,
+        "surface emissivity": 0.96,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.30,
+        "vegetation shadow": 1,
+        "building shadow": 0,
+        "hillshade building": 0,
+        "hillshade green": 0.37,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 3
+    },
+    "Agricultural areas": {
+        "albedo": 0.11,
+        "surface emissivity": 0.95,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.25,
+        "vegetation shadow": 0,
+        "building shadow": 0,
+        "hillshade building": 0,
+        "hillshade green": 0.37,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 3
+    },
+    "Built-up": {
+        "albedo": 0.2,
+        "surface emissivity": 0.85,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.01,
+        "vegetation shadow": 0,
+        "building shadow": 1,
+        "hillshade building": 0.7,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 10
+    },
+    "Built open spaces": {
+        "albedo": 0.45,
+        "surface emissivity": 0.9,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.05,
+        "vegetation shadow": 0,
+        "building shadow": 0,
+        "hillshade building": 0.7,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 14
+    },
+    "Dense Urban Fabric": {
+        "albedo": 0.065,
+        "surface emissivity": 0.9,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.01,
+        "vegetation shadow": 0,
+        "building shadow": 1,
+        "hillshade building": 0.6,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 10
+    },
+    "Medium Urban Fabric": {
+        "albedo": 0.11,
+        "surface emissivity": 0.9,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.02,
+        "vegetation shadow": 0,
+        "building shadow": 1,
+        "hillshade building": 0.8,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 12
+    },
+    "Low Urban Fabric": {
+        "albedo": 0.15,
+        "surface emissivity": 0.9,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.05,
+        "vegetation shadow": 0,
+        "building shadow": 1,
+        "hillshade building": 0.9,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 14
+    },
+    "Public, military, industrial": {
+        "albedo": 0.13,
+        "surface emissivity": 0.9,
+        "wall emissivity": 0.7,
+        "transmissivity": 0.05,
+        "vegetation shadow": 0,
+        "building shadow": 1,
+        "hillshade building": 0.9,
+        "hillshade green": 0,
+        "global shortwave radiation": 956,
+        "surface temperature delta": 14
+    }
+}
+
