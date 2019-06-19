@@ -27,6 +27,7 @@ if [ $FOUND != 'city' ];
 then
 	echo "City table was created!"
         psql -U "postgres" -d "clarity" -c "CREATE TABLE city( id SERIAL PRIMARY KEY, name VARCHAR(32), heat_wave BOOLEAN DEFAULT FALSE, pluvial_flood BOOLEAN DEFAULT FALSE, bbox GEOMETRY(Polygon,3035), code VARCHAR(7) );"
+	psql -U "postgres" -d "clarity" -c "CREATE INDEX city_geom_idx ON city USING GIST(bbox);"
 else
         echo "City table already exists!"
 fi

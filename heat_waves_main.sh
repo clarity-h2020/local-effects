@@ -23,6 +23,9 @@ if [ -f $UA_FOLDER/*$CITY* ] && [ -f $STL_FOLDER/*$CITY* ];
 then
 	echo -e "\e[36mIt seems like" $CITY "is an available city in the file system, gathering data...\e[0m"
 
+	#Inserting cell references from european grid corresponding to the city bbox
+        psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell) SELECT gid FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"';"
+
 	#checking provided city heat wave is already loaded in database
         psql -U "postgres" -d "clarity" -c "SELECT heat_wave FROM city WHERE UPPER(name)=UPPER('"$CITY"');" > city.out
         FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`

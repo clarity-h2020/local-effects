@@ -86,7 +86,7 @@ RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cu
 #URBAN ATLAS (14100 green urban areas, 14200 sport and leisure facilities, 32000 herbaceous vegetation, 33000 Open spaces with little or no vegetations)
 echo "...Extract Urban Atlas data..."
 #ogr2ogr -sql "SELECT area,perimeter FROM "$SHP" WHERE "$CODE"='14100' OR "$CODE"='14200' OR "$CODE"='32000' OR "$CODE"='33000'" $NAME $FILE
-ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP" WHERE "$CODE"='14100' OR "$CODE"='14200' OR "$CODE"='32000' OR "$CODE"='33000'" $NAME $FILE
+ogr2ogr -overwrite -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='14100' OR "$CODE"='14200' OR "$CODE"='32000' OR "$CODE"='33000'" $NAME $FILE
 shp2pgsql -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME".sql"
@@ -126,18 +126,59 @@ rm $NAME2.*
 
 #Putting together ESM and UA extracted data
 echo "...adding previosuly extracted UA data..."
-psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq'), ST_Perimeter(geom), ST_Area(geom), geom FROM public.\""$NAME2"\");"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq'), ST_Area(geom) as area, geom FROM public.\""$NAME2"\");"
 psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME2"\";"
+
+#GEOMETRY INTEGRITY CHECK
+echo "...doing geometry integrity checks..."
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=St_MakeValid(St_Multi(St_Buffer(geom,0.0001)));"
+psql -U "postgres" -d "clarity" -c "SELECT * FROM "$NAME" WHERE NOT ST_Isvalid(geom);" > check.out
+COUNT=`sed -n '3p' < check.out | cut -f 1 -d ' ' | cut -f 2 -d '('`
+if [ $COUNT -gt 0 ];
+then
+        echo $COUNT "Problems found"
+        echo "...deleting affected geometries to avoid further problems with them..."
+        psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" WHERE NOT ST_Isvalid(geom);"
+fi
+rm check.out
+
+#ADD RELATION COLUMNS
+echo "...adding relational columns..."
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD city integer;"
+psql -U "postgres" -d "clarity" -c "SELECT id from city where name='"$CITY"';" > id.out
+ID=`sed "3q;d" id.out | cut -f 3 -d ' '`
+echo "ID CIUDAD:" $ID
+rm id.out
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET city="$ID";"
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD CONSTRAINT "$NAME"_city_fkey FOREIGN KEY (city) REFERENCES city (id);"
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD cell integer;"
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD CONSTRAINT "$NAME"_cell_fkey FOREIGN KEY (cell) REFERENCES laea_etrs_500m (gid);"
+
+#MAKING GOEMETRIES GRID LIKE
+echo "...generating grided geometries..."
+psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public."$NAME"_grid');" > check.out
+FOUND=`sed "3q;d" check.out | cut -f 2 -d ' '`
+rm check.out
+if [ $FOUND ];
+then
+        echo "...deleting old table..."
+        psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME"_grid;"
+fi
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" DROP COLUMN area;"
+psql -U "postgres" -d "clarity" -c "CREATE TABLE "$NAME"_grid (LIKE "$NAME" INCLUDING ALL);"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME"_grid (geom,city,cell) (SELECT ST_Multi(ST_Intersection(ST_Union(a.geom), m.geom)) as geom,"$ID" as city, m.gid as cell FROM "$NAME" a, laea_etrs_500m m, city c WHERE c.name='"$CITY"' AND ST_Intersects(c.bbox,m.geom) AND ST_Intersects(a.geom, m.geom) GROUP BY m.geom,m.gid);"
+###psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME" CASCADE;"
+NAME=$(echo $CITY"_"$LAYER"_GRID" | awk '{print tolower($0)}')
 
 #remove intersections with previous layers
 echo "...removing water intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, w.geom)),3)) FROM "$CITY"_water w WHERE ST_Contains(w.geom, x.geom) OR ST_Overlaps(x.geom, w.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" set geom=sq.geom from (SELECT ST_Multi(ST_CollectionExtract(ST_Difference( ST_Union(t.geom),ST_Multi(ST_Intersection(ST_Union(t.geom),ST_Union(r.geom))) ),3 ) )  as geom, m.gid FROM "$NAME" t, water r, land_use_grid g, laea_etrs_500m m WHERE g.city=1 AND g.cell=m.gid AND m.gid=t.cell AND r.cell=t.cell GROUP BY m.gid,m.geom) sq where cell=sq.gid;"
 echo "...removing roads intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_roads r WHERE ST_Contains(r.geom, x.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" set geom=sq.geom from (SELECT ST_Multi(ST_CollectionExtract(ST_Difference( ST_Union(t.geom),ST_Multi(ST_Intersection(ST_Union(t.geom),ST_Union(r.geom))) ),3 ) )  as geom, m.gid FROM "$NAME" t, roads r, land_use_grid g, laea_etrs_500m m WHERE g.city=1 AND g.cell=m.gid AND m.gid=t.cell AND r.cell=t.cell GROUP BY m.gid,m.geom) sq where cell=sq.gid;"
 echo "...removing railways intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, r.geom)),3)) FROM "$CITY"_railways r WHERE ST_Contains(r.geom, x.geom) OR ST_Overlaps(x.geom, r.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" set geom=sq.geom from (SELECT ST_Multi(ST_CollectionExtract(ST_Difference( ST_Union(t.geom),ST_Multi(ST_Intersection(ST_Union(t.geom),ST_Union(r.geom))) ),3 ) )  as geom, m.gid FROM "$NAME" t, railways r, land_use_grid g, laea_etrs_500m m WHERE g.city=1 AND g.cell=m.gid AND m.gid=t.cell AND r.cell=t.cell GROUP BY m.gid,m.geom) sq where cell=sq.gid;"
 echo "...removing trees intersections..."
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" x SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid( ST_Difference(x.geom, t.geom)),3)) FROM "$CITY"_trees t WHERE ST_Contains(t.geom, x.geom) OR ST_Overlaps(x.geom, t.geom);"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" set geom=sq.geom from (SELECT ST_Multi(ST_CollectionExtract(ST_Difference( ST_Union(t.geom),ST_Multi(ST_Intersection(ST_Union(t.geom),ST_Union(r.geom))) ),3 ) ) as geom, m.gid FROM "$NAME" t, trees r, land_use_grid g, laea_etrs_500m m WHERE g.city=1 AND g.cell=m.gid AND m.gid=t.cell AND r.cell=t.cell GROUP BY m.gid,m.geom) sq where cell=sq.gid;"
 
 #adding rest of the parameters
 echo "...Adding rest of parameters..."
@@ -166,4 +207,5 @@ echo "...Clusterizying..."
 
 #TAKE EVERYTHING FROM CITY TABLE TO GENERAL TABLE
 #psql -U "postgres" -d "clarity" -c "INSERT INTO vegetation (SELECT * FROM "$NAME");"
+#psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME";"
 fi

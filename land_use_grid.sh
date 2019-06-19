@@ -16,7 +16,8 @@ rm check.out
 if [ $HEAT == 't' ] || [ $PLUVIAL == 't' ];
 then
 	#insert cell references for city bbox
-	psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell) SELECT gid FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"';"
+	#psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell) SELECT gid FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"';"
+	#this is now done on heat_wave_main, before input layers generation
 
 	if [ $HEAT == 't' ];
 	then

@@ -1,3 +1,4 @@
+
 #!/bin/bash
 CODE="CODE2006"
 #CODE="CODE2012"
@@ -27,11 +28,52 @@ RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cu
 #ROADS (12210 Fast transit roads and associated land,12220 Other roads and associated land)
 echo "...Extract Urban Atlas data..."
 #ogr2ogr -sql "SELECT area,perimeter FROM "$SHP" WHERE "$CODE"='12210' OR "$CODE"='12220'" $NAME $FILE
-ogr2ogr -overwrite -sql "SELECT Shape_Area as area, Shape_Leng as perimeter FROM "$SHP" WHERE "$CODE"='12210' OR "$CODE"='12220'" $NAME $FILE
+ogr2ogr -overwrite -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='12210' OR "$CODE"='12220'" $NAME $FILE
 shp2pgsql -k -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME".sql"
 rm $NAME".sql"
+
+#GEOMETRY INTEGRITY CHECK
+echo "...doing geometry integrity checks..."
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=St_MakeValid(St_Multi(St_Buffer(geom,0.001)));"
+psql -U "postgres" -d "clarity" -c "SELECT * FROM "$NAME" WHERE NOT ST_Isvalid(geom);" > check.out
+COUNT=`sed -n '3p' < check.out | cut -f 1 -d ' ' | cut -f 2 -d '('`
+if [ $COUNT -gt 0 ];
+then
+        echo $COUNT "Problems found"
+        echo "...deleting affected geometries to avoid further problems with them..."
+        psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" WHERE NOT ST_Isvalid(geom);"
+fi
+rm check.out
+
+#ADD RELATION COLUMNS
+echo "...adding relational columns..."
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD city integer;"
+psql -U "postgres" -d "clarity" -c "SELECT id from city where name='"$CITY"';" > id.out
+ID=`sed "3q;d" id.out | cut -f 3 -d ' '`
+echo "ID CIUDAD:" $ID
+rm id.out
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET city="$ID";"
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD CONSTRAINT "$NAME"_city_fkey FOREIGN KEY (city) REFERENCES city (id);"
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD cell integer;"
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD CONSTRAINT "$NAME"_cell_fkey FOREIGN KEY (cell) REFERENCES laea_etrs_500m (gid);"
+
+#MAKING GOEMETRIES GRID LIKE
+echo "...generating grided geometries..."
+psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public."$NAME"_grid');" > check.out
+FOUND=`sed "3q;d" check.out | cut -f 2 -d ' '`
+rm check.out
+if [ $FOUND ];
+then
+        echo "...deleting old table..."
+        psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME"_grid;"
+fi
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" DROP COLUMN area;"
+psql -U "postgres" -d "clarity" -c "CREATE TABLE "$NAME"_grid (LIKE "$NAME" INCLUDING ALL);"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME"_grid (geom,city,cell) (SELECT ST_Multi(ST_Intersection(ST_Union(a.geom), m.geom)) as geom,"$ID" as city, m.gid as cell FROM "$NAME" a, laea_etrs_500m m, city c WHERE c.name='"$CITY"' AND ST_Intersects(c.bbox,m.geom) AND ST_Intersects(a.geom, m.geom) GROUP BY m.geom,m.gid);"
+psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME" CASCADE;"
+NAME=$(echo $CITY"_"$LAYER"_GRID" | awk '{print tolower($0)}')
 
 #NOT NEED TO REMOVE INTERSECTIONS
 
@@ -81,4 +123,5 @@ echo "...Clusterizing..."
 
 #TAKE EVERYTHING FROM CITY TABLE TO GENERAL TABLE
 #psql -U "postgres" -d "clarity" -c "INSERT INTO roads (SELECT * FROM "$NAME");"
+#psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME";"
 fi
