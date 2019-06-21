@@ -18,7 +18,6 @@ epsilon_sky = 0.0028 * (T_a - 273.15) + 0.787
 theta = 137.2
 eta = 67.9
 
-
 # CONSTANTS
 sigma = 5.67e-8     # Stefan-Boltzmann constant
 Xi_k = 0.7          # absortion coefficient for shortwave radiation
@@ -41,28 +40,6 @@ D = diffuse shortwave radiation
 tau = transmissivity
 '''
 import json
-target_layer = 'Water' # FIXME: comes from an external call
-layer_info = ''
-with open('layer_parameters.json') as json_data_file:
-    layer_info = json.load(json_data_file)[target_layer]
-
-alpha = layer_info['albedo']
-epsilon_surface = layer_info["surface emissivity"]
-epsilon_wall = layer_info["wall emissivity"]
-tau = layer_info["transmissivity"]
-Sv = layer_info["vegetation shadow"]
-Sb = layer_info["building shadow"]
-phi_b = layer_info["hillshade building"]
-phi_v = layer_info["hillshade green"]
-G = layer_info["global shortwave radiation"]
-T_delta = layer_info["surface temperature delta"]
-# FIXME: DATA THAT SHOULD BE AN INPUT 
-# T_s is dependent on the layer, should come from that, currently is simulated on the
-# JSON file
-Ts = T_a + T_delta
-
-
-# POR CAPA Y POR CELDA
 
 
 def get_shortwave_radiation_fluxes(G, Sb, Sv, tau, eta, phi_b, phi_v, alpha):
@@ -91,9 +68,9 @@ def get_longwave_radiation_fluxes(phi_b, phi_v, sigma, T_a, epsilon_sky, epsilon
     '''
     Longwave radiation flux calculation
     '''
-    L_1 = (1 - phi_b - phi_v) * epsilon_sky * sigma * T_a**4
-    L_2 = (2 - phi_v - phi_b) * sigma * epsilon_wall * T_a**4
-    L_3 = (phi_v - phi_b) * sigma * epsilon_wall * Ts**4
+    L_1 = -(1 - phi_b - phi_v) * epsilon_sky * sigma * T_a**4
+    L_2 = (2 - phi_v - phi_b) * sigma * epsilon_wall * Ts**4
+    L_3 = (-phi_v - phi_b) * sigma * epsilon_wall * Ts**4
     L_4 = (2 - phi_b - phi_v) * (1 - 0.7) * sigma * epsilon_sky * T_a**4
     L_out = epsilon_surface * sigma * (Ts + (Ts - T_a))**4
     L_l = L_out * 0.5
@@ -132,6 +109,26 @@ if __name__ == '__main__':
     num_layers = 12
     Tmrt_array = np.zeros(num_layers)
     for i in range(num_layers):
+        layer_name = layers[i]
+        with open('layer_parameters.json') as json_data_file:
+            layer_info = json.load(json_data_file)[layer_name]
+        
+        # FIXME: DATA THAT SHOULD BE AN INPUT 
+        # Some of these parameters will be different for each layer/cell based on the 
+        # calculations described in the excel.
+        # For convenience they are just used here with fixed values from the JSON file
+        alpha = layer_info['albedo']
+        epsilon_surface = layer_info["surface emissivity"]
+        epsilon_wall = layer_info["wall emissivity"]
+        tau = layer_info["transmissivity"]
+        Sv = layer_info["vegetation shadow"]
+        Sb = layer_info["building shadow"] 
+        phi_b = layer_info["hillshade building"]
+        phi_v = layer_info["hillshade green"]
+        G = layer_info["global shortwave radiation"]
+        T_delta = layer_info["surface temperature delta"]
+        Ts = T_a + T_delta
+    
         layer_name = layers[i]
         shortwave_flux = get_shortwave_radiation_fluxes(G, Sb, Sv, tau, eta, phi_b, phi_v, alpha)
         longwave_flux = get_longwave_radiation_fluxes(phi_b, phi_v, sigma, T_a, epsilon_sky, epsilon_wall, epsilon_surface, Ts)
