@@ -1,3 +1,4 @@
+--- Install extension "btree_gist", otherwise there is an error when trying to create the gist indexes of the tables
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 
