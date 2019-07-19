@@ -6,17 +6,17 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 DROP TABLE IF EXISTS public.laea_etrs_500m CASCADE;
 CREATE TABLE public.laea_etrs_500m (
     id SERIAL NOT NULL,
-    id_string CHARACTER VARYING(254) NOT NULL,
+    cellcode CHARACTER VARYING(254) NOT NULL,
     geom GEOMETRY(POLYGON,3035) NOT NULL,
 
     CONSTRAINT laea_etrs_500m_id_pkey PRIMARY KEY (id)
 );
 
 DROP INDEX IF EXISTS laea_etrs_500m_id_idx;
-DROP INDEX IF EXISTS laea_etrs_500m_id_string_idx;
+DROP INDEX IF EXISTS laea_etrs_500m_cellcode_idx;
 DROP INDEX IF EXISTS laea_etrs_500m_geom_idx;
 CREATE INDEX laea_etrs_500m_id_idx ON public.laea_etrs_500m USING gist (id);
-CREATE INDEX laea_etrs_500m_id_string_idx ON public.laea_etrs_500m USING gist (id_string);
+CREATE INDEX laea_etrs_500m_cellcode_idx ON public.laea_etrs_500m USING gist (cellcode);
 CREATE INDEX laea_etrs_500m_geom_idx ON public.laea_etrs_500m USING gist (geom);
 
 CLUSTER laea_etrs_500m_geom_idx ON public.laea_etrs_500m;
