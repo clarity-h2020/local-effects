@@ -1,0 +1,14 @@
+data/grid/500m
+data/heat_waves/esm
+data/heat_waves/stl
+data/heat_waves/UA2012
+data/pluvial_floods/basins
+data/pluvial_floods/streams
+data/pluvial_floods/dem
+
+clarityftp/europe/european_reference_grid/500m/laea_etrs_500m.csv.7z
+clarityftp/europe/european_settlement_map/european_settlement_map_geotiff.zip
+clarityftp/europe/street_tree_layer/street_tree_layer_geotiff.zip
+clarityftp/europe/urban_atlas/urban_atlas_shp_2012.zip
+clarityftp/europe/eu_hydro/eu_hydro.zip
+clarityftp/europe/eu_dem/eu_dem.zip

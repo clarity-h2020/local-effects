@@ -1,0 +1,43 @@
+INSTALL
+=======
+
+POSTGRES 9.6
+POSTGIS
+TOMCAT8
+GEOSERVER 2.14.1
+GDAL-BIN 2.2.2. / GDAL-DATA
+PYTHON
+
+python 3.7
+https://websiteforstudents.com/installing-the-latest-python-3-7-on-ubuntu-16-04-18-04/
+pip install mock
+sudo apt-get install rasterio
+sudo pip install rasterstats
+
+python-NUMPY
+libgdal-dev / libgdal-java
+grass 76 / grass-core
+
+
+
+
+
+GRASS
+=====
+0) replace in script:
+echo "GISDBASE: /home/mario.nunez/script/grass" >>$GISRC
+echo "LOCATION_NAME: location" >>$GISRC
+echo "MAPSET: PERMANENT" >>$GISRC
+#echo "MAPSET: mapset" >>$GISRC
+1) create folders:
+grass/location/mapset
+grass/location/PERMANENT
+2) run
+grass74 -c /home/mario.nunez/script/grass/location
+3) copy files from http://trac.osgeo.org/grass/browser/grass/trunk/demolocation#PERMANENT 
+PROJ_UNITS
+PROJ_INFO
+WIND
+DEFAULT_WIND
+
+

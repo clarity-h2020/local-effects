@@ -1,10 +1,10 @@
-RENOMBRAR TABLA EN BD
-=====================
-ALTER TABLE "200km_10m_N20E46_class30" RENAME TO built_open_areas;
-ALTER SEQUENCE "200km_10m_N20E46_class30_gid_seq" RENAME TO built_open_areas_gid_seq;
-ALTER TABLE built_open_areas RENAME CONSTRAINT "200km_10m_N20E46_class30_pkey" TO built_open_areas_pkey;
-ALTER INDEX "200km_10m_N20E46_class30_geom_idx" RENAME TO built_open_areas_geom_idx;
+RENAME TABLE IN BD
+===================
+ALTER TABLE "200km_10m_N20E46_class30" RENAME TO built_open_spaces;
+ALTER SEQUENCE "200km_10m_N20E46_class30_gid_seq" RENAME TO built_open_spaces_gid_seq;
+ALTER TABLE built_open_spaces RENAME CONSTRAINT "200km_10m_N20E46_class30_pkey" TO built_open_spaces_pkey;
+ALTER INDEX "200km_10m_N20E46_class30_geom_idx" RENAME TO built_open_spaces_geom_idx;
 
 
-IMPORTAR ESRI GEODATABASE
+IMPORT ESRI GEODATABASE
 ogr2ogr -f "PostgreSQL" PG:"dbname=eu_hydro user=postgres host=5.79.69.33" Drianage\ Basins\ All.gdb/ -overwrite -progress --config PG_USE_COPY YES
