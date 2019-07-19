@@ -19,13 +19,20 @@ then
 	#psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell) SELECT gid FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"';"
 	#this is now done on heat_wave_main, before input layers generation
 
+	psql -U "postgres" -d "clarity" -c "SELECT id from city where name='"$CITY"';" > id.out
+	ID=`sed "3q;d" id.out | cut -f 3 -d ' '`
+	rm id.out
+
 	if [ $HEAT == 't' ];
 	then
 		echo -e "\e[36mgenerating land use from heat wave data...\e[0m"
 		for TYPE in "${HEAT_WAVE[@]}";
 		do
 			echo "generating" $TYPE "percentages..."
-			psql -U "postgres" -d "clarity" -c "update land_use_grid set "$TYPE"=subquery.percentage from (select cells.gid as cell, st_area(St_Union(st_intersection(St_MakeValid(w.geom), cells.geom)))/st_area(cells.geom) as percentage from "$TYPE" w,(select g.gid, g.geom from laea_etrs_500m g, city c where ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"') as cells where st_Intersects(w.geom, cells.geom) group by cell, cells.geom) as subquery where land_use_grid.cell=subquery.cell;"
+			#this is the old one by using regular geometries and spatial intersections (SLOWER)
+			#psql -U "postgres" -d "clarity" -c "update land_use_grid set "$TYPE"=subquery.percentage from (select cells.gid as cell, st_area(St_Union(st_intersection(St_MakeValid(w.geom), cells.geom)))/st_area(cells.geom) as percentage from "$TYPE" w,(select g.gid, g.geom from laea_etrs_500m g, city c where ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"') as cells where st_Intersects(w.geom, cells.geom) group by cell, cells.geom) as subquery where land_use_grid.cell=subquery.cell;"
+			#this is the new one by using grided geometries and regular joins (FASTER)
+			psql -U "postgres" -d "clarity" -c "update land_use_grid set "$TYPE"=sq.percentage from (select l.cell as cell,st_area(w.geom)/st_area(g.geom) as percentage from "$TYPE" w, land_use_grid l, laea_etrs_500m g where w.cell=l.cell AND l.cell=g.gid AND l.city="$ID") as sq where sq.cell=land_use_grid.cell;"
 		done
 	else
 		echo -e "\e[33mERROR: heat wave city data not found!\e[0m"

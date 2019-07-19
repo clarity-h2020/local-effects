@@ -114,7 +114,8 @@ then
 		#while read -r LINE;
                 #do
                 #       LAYER=echo $LINE | cut -f 2 -d ' '
-                #       psql -U "postgres" -d "clarity" -c "DROP TABLE "$CITY"_"$LAYER";"
+			#psql -U "postgres" -d "clarity" -c "DROP TABLE  "$CITY"_"$LAYER"_grid;"
+			#psql -U "postgres" -d "clarity" -c "DROP SEQUENCE "$CITY"_"$LAYER"_grid_seq;"
                 #done < "$INDEX"
 
 		#once import finished then delete layers9_12 from database (HOW TO CHECK IF REGION IS ALREADY LOADED IN THE SYSTEM?)
