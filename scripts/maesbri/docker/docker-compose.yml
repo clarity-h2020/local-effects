@@ -1,0 +1,35 @@
+version: '3.3' 
+
+services:
+
+  postgis:
+    hostname: postgis
+    build:
+      #context: ./postgis_11-2.5/alpine
+      context: ./postgis_11-2.5
+    environment:
+        # THIS IS MADNESS: envs need to be ordered POSTGRES_DB > POSTGRES_USER > POSTGRES_PASSWORD.
+        # https://github.com/docker-library/postgres/issues/41#issuecomment-382925263
+        POSTGRES_DB: ${POSTGRES_DB}
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - 5432:5432
+    volumes:
+      - ${BASE_DIR}/postgresql/data:/var/lib/postgresql/data/pgdata
+      #- ./config/postgresql/postgres.conf:/etc/postgresql.conf
+      - type: tmpfs
+        target: /tmp
+    restart: unless-stopped
+
+  pgadmin4:
+    image: dpage/pgadmin4:latest
+    environment: 
+        PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+        PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - 80:80
+    depends_on:
+      - postgis
+    restart: unless-stopped
