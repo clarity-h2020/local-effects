@@ -73,7 +73,7 @@ DROP INDEX IF EXISTS laea_etrs_500m_eorigin_norigin_idx;
 CREATE INDEX laea_etrs_500m_fid_idx ON public.laea_etrs_500m USING gist (fid);
 CREATE INDEX laea_etrs_500m_cellcode_idx ON public.laea_etrs_500m USING gist (cellcode);
 CREATE INDEX laea_etrs_500m_geom_idx ON public.laea_etrs_500m USING gist (geom);
-CREATE INDEX laea_etrs_500m_geom_geohash ON public.laea_etrs_500m (ST_GeoHash(geom));
+---CREATE INDEX laea_etrs_500m_geom_geohash ON public.laea_etrs_500m (ST_GeoHash(geom));
 CREATE INDEX laea_etrs_500m_eorigin_norigin_idx ON public.laea_etrs_500m USING gist (eorigin,norigin);
 
 ---CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_idx;
