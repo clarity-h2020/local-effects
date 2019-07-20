@@ -77,7 +77,8 @@ CREATE INDEX laea_etrs_500m_geom_idx ON public.laea_etrs_500m USING gist (geom);
 CREATE INDEX laea_etrs_500m_eorigin_norigin_idx ON public.laea_etrs_500m USING gist (eorigin,norigin);
 
 ---CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_idx;
-CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_geohash; --- Clustering by GeoHash: https://postgis.net/workshops/postgis-intro/clusterindex.html
+---CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_geohash; --- Clustering by GeoHash: https://postgis.net/workshops/postgis-intro/clusterindex.html
+---CLUSTER public.laea_etrs_500m USING laea_etrs_500m_eorigin_norigin_idx;
 
 --- TABLE: City
 DROP TABLE IF EXISTS public.city CASCADE;
@@ -137,7 +138,7 @@ CREATE INDEX land_use_area_id_idx ON public.land_use_area USING gist (id);
 CREATE INDEX land_use_area_cellid_idx ON public.land_use_area USING gist (cellid);
 CREATE INDEX land_use_area_cityid_idx ON public.land_use_area USING gist (cityid);
 
-CLUSTER public.land_use_area USING land_use_area_id_idx;
+---CLUSTER public.land_use_area USING land_use_area_id_idx;
 
 --- TABLE: Agricultural Areas
 DROP TABLE IF EXISTS public.agricultural_areas;
