@@ -68,16 +68,16 @@ CREATE TABLE public.laea_etrs_500m (
 DROP INDEX IF EXISTS laea_etrs_500m_fid_idx;
 DROP INDEX IF EXISTS laea_etrs_500m_cellcode_idx;
 DROP INDEX IF EXISTS laea_etrs_500m_geom_idx;
-DROP INDEX IF EXISTS laea_etrs_500m_geom_geohash;
+DROP INDEX IF EXISTS laea_etrs_500m_geom_geohash_idx;
 DROP INDEX IF EXISTS laea_etrs_500m_eorigin_norigin_idx;
 CREATE INDEX laea_etrs_500m_fid_idx ON public.laea_etrs_500m USING gist (fid);
 CREATE INDEX laea_etrs_500m_cellcode_idx ON public.laea_etrs_500m USING gist (cellcode);
 CREATE INDEX laea_etrs_500m_geom_idx ON public.laea_etrs_500m USING gist (geom);
----CREATE INDEX laea_etrs_500m_geom_geohash ON public.laea_etrs_500m (ST_GeoHash(geom));
+CREATE INDEX laea_etrs_500m_geom_geohash_idx ON public.laea_etrs_500m (ST_Transform(geom,4326)); --- The geohash algorithm only works on data in geographic (longitude/latitude) coordinates, so we need to transform the geometries (to EPSG:4326, which is longitude/latitude) at the same time as we hash them.
 CREATE INDEX laea_etrs_500m_eorigin_norigin_idx ON public.laea_etrs_500m USING gist (eorigin,norigin);
 
 ---CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_idx;
----CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_geohash; --- Clustering by GeoHash: https://postgis.net/workshops/postgis-intro/clusterindex.html
+---CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_geohash_idx; --- Clustering by GeoHash: https://postgis.net/workshops/postgis-intro/clusterindex.html
 ---CLUSTER public.laea_etrs_500m USING laea_etrs_500m_eorigin_norigin_idx;
 
 --- TABLE: City
