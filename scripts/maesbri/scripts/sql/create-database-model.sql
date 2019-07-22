@@ -73,7 +73,7 @@ DROP INDEX IF EXISTS laea_etrs_500m_eorigin_norigin_idx;
 CREATE INDEX laea_etrs_500m_fid_idx ON public.laea_etrs_500m USING gist (fid);
 CREATE INDEX laea_etrs_500m_cellcode_idx ON public.laea_etrs_500m USING gist (cellcode);
 CREATE INDEX laea_etrs_500m_geom_idx ON public.laea_etrs_500m USING gist (geom);
-CREATE INDEX laea_etrs_500m_geom_geohash_idx ON public.laea_etrs_500m (ST_Transform(geom,4326)); --- The geohash algorithm only works on data in geographic (longitude/latitude) coordinates, so we need to transform the geometries (to EPSG:4326, which is longitude/latitude) at the same time as we hash them.
+CREATE INDEX laea_etrs_500m_geom_geohash_idx ON public.laea_etrs_500m (ST_GeoHash(ST_Transform(geom,4326))); --- The geohash algorithm only works on data in geographic (longitude/latitude) coordinates, so we need to transform the geometries (to EPSG:4326, which is longitude/latitude) at the same time as we hash them.
 CREATE INDEX laea_etrs_500m_eorigin_norigin_idx ON public.laea_etrs_500m USING gist (eorigin,norigin);
 
 ---CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_idx;
@@ -85,7 +85,8 @@ DROP TABLE IF EXISTS public.city CASCADE;
 CREATE TABLE public.city (
     id SERIAL NOT NULL,
     name CHARACTER VARYING(32) NOT NULL,
-    code CHARACTER VARYING(7) NOT NULL, 
+    code CHARACTER VARYING(7) NOT NULL,
+    countrycode CHARACTER VARYING(3) NOT NULL,
     bbox GEOMETRY(POLYGON,3035) NOT NULL,
 
     heat_wave BOOLEAN DEFAULT FALSE,
@@ -94,13 +95,15 @@ CREATE TABLE public.city (
     CONSTRAINT city_id_pkey PRIMARY KEY (id)
 );
 
-DROP INDEX IF EXISTS cityid_idx;
+DROP INDEX IF EXISTS city_id_idx;
 DROP INDEX IF EXISTS city_name_idx;
 DROP INDEX IF EXISTS city_code_idx;
+DROP INDEX IF EXISTS city_countrycode_idx;
 DROP INDEX IF EXISTS city_bbox_idx;
 CREATE INDEX city_id_idx ON public.city USING gist (id);
 CREATE INDEX city_name_idx ON public.city USING gist (name);
 CREATE INDEX city_code_idx ON public.city USING gist (code);
+CREATE INDEX city_countrycode_idx ON public.city USING gist (countrycode);
 CREATE INDEX city_bbox_idx ON public.city USING gist (bbox);
 
 
