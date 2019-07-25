@@ -1,9 +1,9 @@
 #!/bin/bash
 #INDEX="/home/mario.nunez/script/parameters/heat_wave_layers.dat"
-UA_VERSION="UA2006"
-UA_VERSION_FILE="UA2006_Revised"
-#UA_VERSION="UA2012"
-#UA_VERSION_FILE="UA2012"
+#UA_VERSION="UA2006"
+#UA_VERSION_FILE="UA2006_Revised"
+UA_VERSION="UA2012"
+UA_VERSION_FILE="UA2012"
 
 DATA="/home/mario.nunez/script/data"
 UA_FOLDER="/home/mario.nunez/data/heat_waves/"$UA_VERSION
@@ -24,7 +24,7 @@ then
 	echo -e "\e[36mIt seems like" $CITY "is an available city in the file system, gathering data...\e[0m"
 
 	#Inserting cell references from european grid corresponding to the city bbox
-        psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell) SELECT gid FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"';"
+        psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell,city) (SELECT g.gid,c.id FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"');"
 
 	#checking provided city heat wave is already loaded in database
         psql -U "postgres" -d "clarity" -c "SELECT heat_wave FROM city WHERE UPPER(name)=UPPER('"$CITY"');" > city.out

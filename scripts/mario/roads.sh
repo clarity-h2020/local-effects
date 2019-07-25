@@ -1,7 +1,7 @@
 
 #!/bin/bash
-CODE="CODE2006"
-#CODE="CODE2012"
+#CODE="CODE2006"
+CODE="CODE2012"
 
 LAYER="roads"
 if [[ $# -eq 0 ]] ; then
@@ -10,7 +10,7 @@ if [[ $# -eq 0 ]] ; then
 fi
 CITY=$(echo "$1" | awk '{print toupper($0)}')
 FOLDER="data/"$CITY"/ua"
-FILE=`ls -la $FOLDER/*.shp | cut -f 10 -d ' '`
+FILE=`ls -la $FOLDER/*.shp | cut -f 2 -d ':' | cut -f 2 -d ' '`
 if [ ! "$FILE" ]; then
     echo "ERROR: City data not found!"
 else
@@ -19,7 +19,6 @@ NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
 
 #ROADS (12210 Fast transit roads and associated land,12220 Other roads and associated land)
 echo "...Extract Urban Atlas data..."
-#ogr2ogr -sql "SELECT area,perimeter FROM "$SHP" WHERE "$CODE"='12210' OR "$CODE"='12220'" $NAME $FILE
 ogr2ogr -overwrite -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='12210' OR "$CODE"='12220'" $NAME $FILE
 shp2pgsql -k -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
 rm -r $NAME
@@ -44,7 +43,7 @@ rm check.out
 echo "...adding relational columns..."
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD city integer;"
 psql -U "postgres" -d "clarity" -c "SELECT id from city where name='"$CITY"';" > id.out
-ID=`sed "3q;d" id.out | cut -f 3 -d ' '`
+ID=`sed "3q;d" id.out | sed -e 's/^[ \t]*//'`
 rm id.out
 psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET city="$ID";"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD CONSTRAINT "$NAME"_city_fkey FOREIGN KEY (city) REFERENCES city (id);"
@@ -54,7 +53,7 @@ psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD CONSTRAINT "$NAME"_c
 #MAKING GOEMETRIES GRID LIKE
 echo "...generating grided geometries..."
 psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public."$NAME"_grid');" > check.out
-FOUND=`sed "3q;d" check.out | cut -f 2 -d ' '`
+FOUND=`sed "3q;d" check.out | sed -e 's/^[ \t]*//'`
 rm check.out
 if [ ! -z $FOUND ];
 then
@@ -124,5 +123,5 @@ echo "...Clusterizing..."
 #psql -U "postgres" -d "clarity" -c "CLUSTER public.\""$NAME"\" USING public.\""$NAME"\"_pkey;"
 
 #TAKE EVERYTHING FROM CITY TABLE TO GENERAL TABLE
-psql -U "postgres" -d "clarity" -c "INSERT INTO roads (SELECT * FROM "$NAME");"
+psql -U "postgres" -d "clarity" -c "INSERT INTO roads (geom,city,cell,albedo,emissivity,transmissivity,vegetation_shadow,run_off_coefficient,fua_tunnel,building_shadow,hillshade_building) (SELECT geom,city,cell,albedo,emissivity,transmissivity,vegetation_shadow,run_off_coefficient,fua_tunnel,building_shadow,hillshade_building FROM "$NAME");"
 fi
