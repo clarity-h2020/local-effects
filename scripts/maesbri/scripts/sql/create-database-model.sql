@@ -85,8 +85,8 @@ DROP TABLE IF EXISTS public.city CASCADE;
 CREATE TABLE public.city (
     id SERIAL NOT NULL,
     name CHARACTER VARYING(32) NOT NULL,
-    code CHARACTER VARYING(7) NOT NULL,
-    countrycode CHARACTER VARYING(3) NOT NULL,
+    code CHARACTER VARYING(7) UNIQUE NOT NULL,
+    country_code CHARACTER VARYING(3) NOT NULL,
     bbox GEOMETRY(POLYGON,3035) NOT NULL,
 
     heat_wave BOOLEAN DEFAULT FALSE,
@@ -98,12 +98,12 @@ CREATE TABLE public.city (
 DROP INDEX IF EXISTS city_id_idx;
 DROP INDEX IF EXISTS city_name_idx;
 DROP INDEX IF EXISTS city_code_idx;
-DROP INDEX IF EXISTS city_countrycode_idx;
+DROP INDEX IF EXISTS city_country_code_idx;
 DROP INDEX IF EXISTS city_bbox_idx;
 CREATE INDEX city_id_idx ON public.city USING gist (id);
 CREATE INDEX city_name_idx ON public.city USING gist (name);
 CREATE INDEX city_code_idx ON public.city USING gist (code);
-CREATE INDEX city_countrycode_idx ON public.city USING gist (countrycode);
+CREATE INDEX city_country_code_idx ON public.city USING gist (country_code);
 CREATE INDEX city_bbox_idx ON public.city USING gist (bbox);
 
 
