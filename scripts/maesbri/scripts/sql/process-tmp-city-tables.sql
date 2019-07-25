@@ -1,9 +1,3 @@
-[dense_urban_fabric] 1.2
-[medium_urban_fabric] 1.1
-[low_urban_fabric] 1
-[public_military_industrial] 1
-
-
 
 --- insert in the city table the basic information about the current city being processed
 INSERT INTO city (name, code, country_code, bbox) 
