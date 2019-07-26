@@ -15,11 +15,10 @@ DROP TABLE IF EXISTS public.__trees;
 DROP TABLE IF EXISTS public.__vegetation;
 DROP TABLE IF EXISTS public.__water;
 
-
-
+DROP TABLE IF EXISTS public.__urban_atlas;
+DROP TABLE IF EXISTS public.__street_trees;
 
 --- Create again all temporary tables
-SELECT create_table_like('city', '__city');
 SELECT create_table_like('land_use_area', '__land_use_area');
 SELECT create_table_like('agricultural_areas', '__agricultural_areas');
 SELECT create_table_like('basins', '__basins');
@@ -38,13 +37,12 @@ SELECT create_table_like('water', '__water');
 
 
 --- Temporary Urban Atlas table for current city being processed
-DROP TABLE IF EXISTS public.__urban_atlas;
 CREATE TABLE public.__urban_atlas (
     fid SERIAL NOT NULL,
-    country CHARACTER VARYING(2) NOT NULL,
-    city CHARACTER VARYING(254) NOT NULL, --- field: cities
+    ---city_name CHARACTER VARYING(254) NOT NULL, --- field: cities
+    ---city_code CHARACTER VARYING(7) NOT NULL,
+    ---countrycode CHARACTER VARYING(2) NOT NULL,    
     featuretype_code CHARACTER VARYING(7) NOT NULL, --- field: code2012
-    featuretype_description CHARACTER VARYING(254) NOT NULL, --- field: item2012
     geom GEOMETRY(POLYGON,3035),
 
     CONSTRAINT __urban_atlas_fid_pkey PRIMARY KEY (fid)
@@ -53,10 +51,22 @@ CREATE TABLE public.__urban_atlas (
 DROP INDEX IF EXISTS __urban_atlas_fid_idx;
 DROP INDEX IF EXISTS __urban_atlas_featuretype_code_idx;
 DROP INDEX IF EXISTS __urban_atlas_geom_idx;
-
 CREATE INDEX __urban_atlas_fid_idx ON public.__urban_atlas USING gist (fid);
 CREATE INDEX __urban_atlas_featuretype_code_idx ON public.__urban_atlas USING gist (featuretype_code);
 CREATE INDEX __urban_atlas_geom_idx ON public.__urban_atlas USING gist (geom);
 
 --- Temporary Street Trees table for current city being processed
-DROP TABLE IF EXISTS public.__street_trees;
+CREATE TABLE public.__street_trees (
+    fid SERIAL NOT NULL,
+    ---city_name CHARACTER VARYING(254) NOT NULL, --- field: cities
+    ---city_code CHARACTER VARYING(7) NOT NULL,
+    ---countrycode CHARACTER VARYING(2) NOT NULL,
+    geom GEOMETRY(POLYGON,3035),
+
+    CONSTRAINT __street_trees_fid_pkey PRIMARY KEY (fid)
+);
+
+DROP INDEX IF EXISTS __street_trees_fid_idx;
+DROP INDEX IF EXISTS __street_trees_geom_idx;
+CREATE INDEX __street_trees_fid_idx ON public.__street_trees USING gist (fid);
+CREATE INDEX __street_trees_geom_idx ON public.__street_trees USING gist (geom);
