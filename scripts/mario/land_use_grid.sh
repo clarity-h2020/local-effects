@@ -16,13 +16,15 @@ rm check.out
 #if [ $HEAT == 't' ] || [ $PLUVIAL == 't' ];
 if [ $HEAT == 't' ];
 then
-	#insert cell references for city bbox
-	psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell,city) SELECT g.gid,c.id FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"';"
-	#this is now done on heat_wave_main, before input layers generation
-
+	#get city ID
 	psql -U "postgres" -d "clarity" -c "SELECT id from city where name='"$CITY"';" > id.out
-	ID=`sed "3q;d" id.out | sed 's/^ *//;s/ *$//'`
+	ID=`sed "3q;d" id.out | sed -e 's/^[ \t]*//'`
 	rm id.out
+	#delete old registers in land use grid table for current city
+	psql -U "postgres" -d "clarity" -c "DELETE FROM land_use_grid WHERE city="$ID";"
+
+ 	#insert cell references for city bbox
+	psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell,city) SELECT g.gid,c.id FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"';"
 
 	if [ $HEAT == 't' ];
 	then
