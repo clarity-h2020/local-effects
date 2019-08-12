@@ -10,7 +10,7 @@ rm check.out
 if [ -z $FOUND ];
 then
 	echo -e "\e[36mCreating streams table\e[0m"
-	psql -U "postgres" -d "clarity" -c "CREATE SEQUENCE public.streams_id_seq INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;"
+#	psql -U "postgres" -d "clarity" -c "CREATE SEQUENCE public.streams_id_seq INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;"
         psql -U "postgres" -d "clarity" -c "CREATE TABLE streams(id serial NOT NULL, stream_typ character varying(254),\"Shape_Leng\" numeric, geom geometry(LineString,3035),city integer, start_height numeric, end_height numeric,CONSTRAINT streams_pkey PRIMARY KEY (id));"
 	psql -U "postgres" -d "clarity" -c "CREATE INDEX streams_geom_idx ON streams USING GIST(geom);"
 
@@ -36,7 +36,7 @@ rm check.out
 if [ -z $FOUND ];
 then
         echo -e "\e[36mCreating basins table\e[0m"
-	psql -U "postgres" -d "clarity" -c "CREATE SEQUENCE public.basins_id_seq INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;"
+#	psql -U "postgres" -d "clarity" -c "CREATE SEQUENCE public.basins_id_seq INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 9223372036854775807 CACHE 1;"
 	psql -U "postgres" -d "clarity" -c "CREATE TABLE basins(id serial NOT NULL, \"AREA_KM2\" numeric, \"SHAPE_Leng\" numeric, \"SHAPE_Area\" numeric, geom geometry(MultiPolygon,3035), city integer,CONSTRAINT basins_pkey PRIMARY KEY (id));"
 	psql -U "postgres" -d "clarity" -c "CREATE INDEX basins_geom_idx ON basins USING GIST(geom);"
 

@@ -1,8 +1,8 @@
 #!/bin/bash
-UA_VERSION="UA2006"
-UA_VERSION_FILE="UA2006_Revised"
-#UA_VERSION="UA2012"
-#UA_VERSION_FILE="UA2012"
+#UA_VERSION="UA2006"
+#UA_VERSION_FILE="UA2006_Revised"
+UA_VERSION="UA2012"
+UA_VERSION_FILE="UA2012"
 DATA="/home/mario.nunez/data"
 TEMP_DATA="/home/mario.nunez/script/data"
 
@@ -22,11 +22,11 @@ STREAMS_FOLDER=$DATA"/pluvial_floods/streams"
 #Create city table in postgresql if it does not exists
 psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public.city');" > city.out
 FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`
-rm city.out
-if [ $FOUND != 'city' ];
+#rm city.out
+if [ "$FOUND" != 'city' ];
 then
-	echo "City table was created!"
-        psql -U "postgres" -d "clarity" -c "CREATE TABLE city( id SERIAL PRIMARY KEY, name VARCHAR(32), heat_wave BOOLEAN DEFAULT FALSE, pluvial_flood BOOLEAN DEFAULT FALSE, bbox GEOMETRY(Polygon,3035), code VARCHAR(7) );"
+	echo "Creating table CITY..."
+        psql -U "postgres" -d "clarity" -c "CREATE TABLE city( id SERIAL PRIMARY KEY, name VARCHAR(32), heat_wave BOOLEAN DEFAULT FALSE, pluvial_flood BOOLEAN DEFAULT FALSE, bbox GEOMETRY(Polygon,3035),boundary GEOMETRY(MULTIPOLYGON, 3035), code VARCHAR(7) );"
 	psql -U "postgres" -d "clarity" -c "CREATE INDEX city_geom_idx ON city USING GIST(bbox);"
 else
         echo "City table already exists!"
@@ -51,6 +51,14 @@ do
                 YMIN=`ogrinfo -ro -so -al $TEMP_DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE".shp" | grep "Extent" | cut -f 1 -d ')' | cut -f 3 -d ' '`
                 XMAX=`ogrinfo -ro -so -al $TEMP_DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE".shp" | grep "Extent" | cut -f 3 -d '(' | cut -f 1 -d ','`
                 XMIN=`ogrinfo -ro -so -al $TEMP_DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE".shp" | grep "Extent" | cut -f 2 -d '(' | cut -f 1 -d ','`
+
+		#UA boundary
+		SHP_FILE=$TEMP_DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE"_Boundary.shp"
+		NAME=$(echo $CITY"_boundary" | awk '{print tolower($0)}')
+		shp2pgsql -k -s 3035 -I -d $SHP_FILE $NAME > $NAME".sql"
+		psql -d clarity -U postgres -f $NAME".sql"
+		rm $NAME".sql"
+
 		rm -r $TEMP_DATA/ua
 
                 #LOAD CITY INTO DATABASE WITH ITS BBOX
@@ -63,6 +71,8 @@ do
                         #city is not in database, a new register is created for it with bbox, name and code
 			echo $CITY "has been inserted in database!"
                         psql -U "postgres" -d "clarity" -c "INSERT INTO city (name, heat_wave, pluvial_flood, bbox, code) VALUES (UPPER('"$CITY"'), false, false, ST_MakeEnvelope("$XMIN","$YMIN","$XMAX","$YMAX",3035), '"$CODE"');"
+			psql -U "postgres" -d "clarity" -c "UPDATE city SET boundary=sq.geom FROM (SELECT geom FROM "$NAME") as sq WHERE name='"$CITY"';"
+			psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME";"
 		else
 			echo $CITY "already exists in database, skipping..."
                 fi

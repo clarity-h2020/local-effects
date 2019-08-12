@@ -24,7 +24,7 @@ then
 	echo -e "\e[36mIt seems like" $CITY "is an available city in the file system, gathering data...\e[0m"
 
 	#Inserting cell references from european grid corresponding to the city bbox
-        psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell,city) (SELECT g.gid,c.id FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.bbox) AND c.name='"$CITY"');"
+        psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell,city) (SELECT g.gid,c.id FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.boundary) AND c.name='"$CITY"');"
 
 	#checking provided city heat wave is already loaded in database
         psql -U "postgres" -d "clarity" -c "SELECT heat_wave FROM city WHERE UPPER(name)=UPPER('"$CITY"');" > city.out
@@ -52,7 +52,13 @@ then
 	        cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE".shx" $DATA/ua/
 	        cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE".dbf" $DATA/ua/
 	        cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE".prj" $DATA/ua/
-	        rm -r $DATA/ua/$NAME
+		#boundary
+		mkdir $DATA/ua/boundary
+		cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE"_Boundary.shp" $DATA/ua/boundary/$CITY"_boundary.shp"
+		cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE"_Boundary.shx" $DATA/ua/boundary/$CITY"_boundary.shx"
+		cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE"_Boundary.dbf" $DATA/ua/boundary/$CITY"_boundary.dbf"
+		cp $DATA/ua/$NAME/Shapefiles/$NAME"_"$UA_VERSION_FILE"_Boundary.prj" $DATA/ua/boundary/$CITY"_boundary.prj"
+		rm -r $DATA/ua/$NAME
 
 		#GET CITY BBOX FROM UA
 		MAXY=`ogrinfo -ro -so -al $DATA/ua/$NAME"_"$UA_VERSION_FILE".shp" | grep "Extent" | cut -f 2 -d ')' | cut -f 4 -d ' '`
