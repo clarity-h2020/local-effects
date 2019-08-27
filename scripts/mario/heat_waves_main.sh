@@ -13,6 +13,8 @@ ESM30_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_30"
 ESM40_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_40"
 ESM50_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_50"
 
+LAYERS=("water" "roads" "railways" "trees" "vegetation" "agricultural_areas" "built_up" "built_open_spaces" "dense_urban_fabric" "medium_urban_fabric" "low_urban_fabric" "public_military_industrial")
+
 if [[ $# -eq 0 ]] ; then
     echo -e "\e[33mERROR: No city name provided!\e[0m"
     exit 1
@@ -99,36 +101,43 @@ then
 #			cp $TIF $DATA/height/$CITY"_height".tif
 #		fi
 
-		echo -e "\e[36mGenerating input layers...\e[0m"
+		echo -e "\e[36mGeneratingauxiliar layers 9-12...\e[0m"
 		#GENERATE LAYERS 9-12 TOGETHER
 		source layers9_12.sh $CITY
 		wait
 
 		#REGISTER THAT NEEDED DATA IS PREPARED FOR THE CITY
+		echo -e "\e[36mRegisteing data generation...\e[0m"
 		psql -U "postgres" -d "clarity" -c "UPDATE CITY SET heat_wave=TRUE WHERE NAME='"$CITY"';"
 
 		#GENERATE 12 LAYERS
 		#run each script in corresponding order
-		#while read -r LINE;
-		#do
-		#	LAYER=echo $LINE | cut -f 2 -d ' '
-		#       source $LAYER.sh > $LAYER.out
-		#       wait
-		#done < "$INDEX"
+		echo -e "\e[36mInput layer generation...\e[0m"
+		for LAYER in "${LAYERS[@]}";
+		do
+			echo -e "\e[7minverted..."$LAYER"...\e[27mNormal"
+		        source $LAYER.sh > $LAYER.out
+		        wait
+		done
 
 		#once import finished then delete all city layers from database
-		#while read -r LINE;
-                #do
-                #       LAYER=echo $LINE | cut -f 2 -d ' '
-			#psql -U "postgres" -d "clarity" -c "DROP TABLE  "$CITY"_"$LAYER"_grid;"
-			#psql -U "postgres" -d "clarity" -c "DROP SEQUENCE "$CITY"_"$LAYER"_grid_seq;"
-                #done < "$INDEX"
+		for LAYER in "${LAYERS[@]}";
+                do
+			echo -e "\e[36mDeleting "$LAYER" auxuliar table...\e[0m"
+			psql -U "postgres" -d "clarity" -c "DROP TABLE IF EXISTS "$CITY"_"$LAYER"_grid;"
+			psql -U "postgres" -d "clarity" -c "DROP SEQUENCE IF EXISTS "$CITY"_"$LAYER"_grid_seq;"
+			psql -U "postgres" -d "clarity" -c "DROP TABLE IF EXISTS "$CITY"_"$LAYER";"
+                        psql -U "postgres" -d "clarity" -c "DROP SEQUENCE IF EXISTS "$CITY"_"$LAYER"_seq;"
+                done
 
 		#once import finished then delete layers9_12 from database (HOW TO CHECK IF REGION IS ALREADY LOADED IN THE SYSTEM?)
-		#psql -U "postgres" -d "clarity" -c "DROP TABLE "$CITY"_layers9_12;"
+		echo -e "\e[36mDeleting auxiliar layer 9-12...\e[0m"
+		psql -U "postgres" -d "clarity" -c "DROP TABLE "$CITY"_layers9_12;"
 
 		#delete city data
-		#rm -r $DATA
+		echo -e "\e[36mDeleting file sytem source data...\e[0m"
+		rm -r $DATA
+
 		echo -e "\e[36mGeneration completed for "$CITY"\e[0m"
 	fi
 else

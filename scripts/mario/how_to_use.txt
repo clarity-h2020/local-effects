@@ -22,7 +22,7 @@ For a given city it gathers needed data from database and process it to generate
 
 #6
 heat_waves_main.sh
-For a given city it gathers needed data from file system, preparing it for further processing and calls to layers9_12.
+For a given city it gathers needed data from file system, preparing it for further processing and calls to layers9_12 then call land use scripts(12).
 
 #7
 layers9_12.sh

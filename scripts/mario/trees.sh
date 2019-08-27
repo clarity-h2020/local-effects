@@ -146,5 +146,4 @@ psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD hillshade_green_frac
 
 #TAKE EVERYTHING FROM CITY TABLE TO GENERAL TABLE
 psql -U "postgres" -d "clarity" -c "INSERT INTO "$LAYER" (geom,city,cell,albedo,emissivity,transmissivity,vegetation_shadow,run_off_coefficient,fua_tunnel,building_shadow,hillshade_green_fraction) (SELECT geom,city,cell,albedo,emissivity,transmissivity,vegetation_shadow,run_off_coefficient,fua_tunnel,building_shadow,hillshade_green_fraction FROM "$NAME");"
-psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME";"
 fi

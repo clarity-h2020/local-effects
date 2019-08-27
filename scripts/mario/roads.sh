@@ -114,5 +114,4 @@ psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_bu
 
 #TAKE EVERYTHING FROM CITY TABLE TO GENERAL TABLE
 psql -U "postgres" -d "clarity" -c "INSERT INTO "$LAYER" (geom,city,cell,albedo,emissivity,transmissivity,vegetation_shadow,run_off_coefficient,fua_tunnel,building_shadow,hillshade_building) (SELECT geom,city,cell,albedo,emissivity,transmissivity,vegetation_shadow,run_off_coefficient,fua_tunnel,building_shadow,hillshade_building FROM "$NAME");"
-psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME";"
 fi

@@ -59,7 +59,7 @@ then
 		#create table insert into cogiendo lo que intersecta
 		psql -U "postgres" -d "clarity" -c "CREATE TABLE basins_"$CITY"(gid integer PRIMARY KEY,\"AREA_KM2\" numeric,\"SHAPE_Leng\" numeric,\"SHAPE_Area\" numeric,geom geometry(MultiPolygon,3035),city integer);"
 		psql -U "postgres" -d "clarity" -c "CREATE INDEX basins_"$CITY"_idx ON basins_"$CITY" USING GIST(geom);"
-		psql -U "postgres" -d "clarity" -c "INSERT INTO basins_"$CITY"(SELECT b.gid,b.\"AREA_KM2\",b.\"SHAPE_Leng\",b.\"SHAPE_Area\",b.geom,c.id  FROM basins_europe b, city c WHERE ST_Intersects(b.geom,c.bbox) and c.name='"$CITY"');"
+		psql -U "postgres" -d "clarity" -c "INSERT INTO basins_"$CITY"(SELECT b.gid,b.\"AREA_KM2\",b.\"SHAPE_Leng\",b.\"SHAPE_Area\",b.geom,c.id  FROM basins_europe b, city c WHERE ST_Intersects(b.geom,c.boundary) and c.name='"$CITY"');"
 		#Clusterization
 		#echo -e "\e[36m...Clusterizing basins...\e[0m"
 		#psql -U "postgres" -d "clarity" -c "CLUSTER basins USING basins_pkey;"
@@ -74,7 +74,7 @@ then
 		#create table insert into cogiendo lo que intersecta
 		psql -U "postgres" -d "clarity" -c "CREATE TABLE streams_"$CITY"(gid integer PRIMARY KEY,stream_typ character varying(254) COLLATE pg_catalog.\"default\",\"Shape_Leng\" numeric,geom geometry(LineString,3035),city integer);"
 		psql -U "postgres" -d "clarity" -c "CREATE INDEX streams_"$CITY"_idx ON streams_"$CITY" USING GIST(geom);"
-		psql -U "postgres" -d "clarity" -c "INSERT INTO streams_"$CITY"(SELECT s.gid,s.stream_typ,s.\"Shape_Leng\",ST_LineMerge(s.geom),c.id FROM streams_europe s, city c WHERE ST_Intersects(s.geom,c.bbox) and c.name='"$CITY"');"
+		psql -U "postgres" -d "clarity" -c "INSERT INTO streams_"$CITY"(SELECT s.gid,s.stream_typ,s.\"Shape_Leng\",ST_LineMerge(s.geom),c.id FROM streams_europe s, city c WHERE ST_Intersects(s.geom,c.boundary) and c.name='"$CITY"');"
 
 		#get bbox from streams clipped in database to calculate DEM AREA TO LOAD INTO DATABASE
 		XMIN=`psql -U "postgres" -d "clarity" -c "SELECT ST_Extent(geom) as extent FROM streams_"$CITY";" | grep 'BOX' | cut -f 1 -d ',' | cut -f 2 -d '(' | cut -f 1 -d ' '`

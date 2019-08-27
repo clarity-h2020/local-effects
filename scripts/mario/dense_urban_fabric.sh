@@ -102,5 +102,4 @@ psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD context real DEFAULT
 
 #TAKE EVERYTHING FROM CITY TABLE TO GENERAL TABLE
 psql -U "postgres" -d "clarity" -c "INSERT INTO "$LAYER" (geom,city,cell,albedo,emissivity,transmissivity,run_off_coefficient,context) (SELECT geom,city,cell,albedo,emissivity,transmissivity,run_off_coefficient,context FROM "$NAME");"
-psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME";"
 fi
