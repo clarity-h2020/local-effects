@@ -138,6 +138,9 @@ then
 		echo -e "\e[36mDeleting file sytem source data...\e[0m"
 		rm -r $DATA
 
+		#generate land use percentages
+		source land_use_grid.sh $CITY > $CITY"_grid.out"
+
 		echo -e "\e[36mGeneration completed for "$CITY"\e[0m"
 	fi
 else
