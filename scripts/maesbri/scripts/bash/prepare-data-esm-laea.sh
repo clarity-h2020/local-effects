@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./env.sh #this is the same as source ./env.sh
+. ./env.sh #this is the same as source ./env.sh
 
 
 #################################################################################
@@ -10,13 +10,15 @@ source ./env.sh #this is the same as source ./env.sh
 #################################################################################
 
 prepare_esm_data() {
+
+  echo 'Starting processing ESM data ...'
   # remove the temporal esm folder and recretate again the class 30, 40 y 50 folders
   echo '${DATA_TMP_ESM}: ' ${DATA_TMP_ESM}
 
   rm -r ${DATA_TMP_ESM}
   mkdir -p ${DATA_TMP_ESM_CLASS_30} ${DATA_TMP_ESM_CLASS_40} ${DATA_TMP_ESM_CLASS_50}
 
-
+  echo 'Extracting ESM data ...'
   unzip ${DATA_ESM_ZIPFILE} -d ${DATA_TMP_ESM}
   #unzip the European Settlement Map classes zip file to the temporal destinations
   for esm_file in `unzip -Z1 ${DATA_ESM_ZIPFILE} | sort`;
@@ -44,22 +46,33 @@ prepare_esm_data() {
 #################################################################################
 
 prepare_laea_data() {
+
+  echo 'Starting processing LAEA 500m grid data ...'
+  # remove the temporal laea grid folder and recretate it again
+  echo '${DATA_TMP_LAEA_GRID}: ' ${DATA_TMP_LAEA_GRID}
+
+  rm -r ${DATA_TMP_LAEA_GRID}
+  mkdir -p ${DATA_TMP_LAEA_GRID}
+
+  echo 'Extracting LAEA 500m grid data ...'
   # unzip and load the European Reference Grid into the database
   unzip ${DATA_LAEA_GRID_ZIPFILE} -d ${DATA_TMP_LAEA_GRID}
   
+  echo 'Ingesting LAEA 500m grid data into database ...'
   ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" -append -nln laea_etrs_500m ${DATA_TMP_LAEA_GRID}'/laea_etrs_500m.gpkg'
 
   # remove the European Reference Grid file
   rm -r ${DATA_TMP_LAEA_GRID}
 
   # perform clustering of the data and cleaning on the table based on the geohash index
-  #psql -U "clarity" -h localhost -d "claritydb" -c "VACUUM ANALYZE laea_etrs_500m; CLUSTER public.laea_etrs_500m USING laea_etrs_500m_eorigin_norigin_idx;"
+  echo 'Clustering data in database ...'
   psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} -c "CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_geohash_idx;"
+  echo 'Vacuum analying data in database ...'
   psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} -c "VACUUM ANALYZE laea_etrs_500m;"
 
 }
 
 
 
-prepare_esm_data
-#prepare_laea_data
+#prepare_esm_data
+prepare_laea_data
