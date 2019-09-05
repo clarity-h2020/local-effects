@@ -1,6 +1,7 @@
 #!/bin/bash
+#NOTE: Execute the script like this: bash ./script.sh, otherwise some commands may not work, e.g., source, <<<, etc.
 
-. ./env.sh #this is the same as source ./env.sh
+source ./env.sh #this is the same as source ./env.sh
 
 
 #################################################################################
@@ -59,7 +60,7 @@ prepare_laea_data() {
   unzip ${DATA_LAEA_GRID_ZIPFILE} -d ${DATA_TMP_LAEA_GRID}
   
   echo 'Ingesting LAEA 500m grid data into database ...'
-  ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" -append -nln laea_etrs_500m ${DATA_TMP_LAEA_GRID}'/laea_etrs_500m.gpkg'
+  ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" -progress -append -nln laea_etrs_500m ${DATA_TMP_LAEA_GRID}'/laea_etrs_500m.gpkg'
 
   # remove the European Reference Grid file
   rm -r ${DATA_TMP_LAEA_GRID}
