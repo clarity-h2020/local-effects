@@ -88,9 +88,7 @@ CREATE TABLE public.city (
     code CHARACTER VARYING(7) UNIQUE NOT NULL,
     country_code CHARACTER VARYING(3) NOT NULL,
     bbox GEOMETRY(POLYGON,3035) NOT NULL,
-
-    heat_wave BOOLEAN DEFAULT FALSE,
-    pluvial_flood BOOLEAN DEFAULT FALSE,
+    boundary GEOMETRY(POLYGON,3035) NOT NULL,
         
     CONSTRAINT city_id_pkey PRIMARY KEY (id)
 );
@@ -100,11 +98,13 @@ DROP INDEX IF EXISTS city_name_idx;
 DROP INDEX IF EXISTS city_code_idx;
 DROP INDEX IF EXISTS city_country_code_idx;
 DROP INDEX IF EXISTS city_bbox_idx;
+DROP INDEX IF EXISTS city_boundary_idx;
 CREATE INDEX city_id_idx ON public.city USING gist (id);
 CREATE INDEX city_name_idx ON public.city USING gist (name);
 CREATE INDEX city_code_idx ON public.city USING gist (code);
 CREATE INDEX city_country_code_idx ON public.city USING gist (country_code);
 CREATE INDEX city_bbox_idx ON public.city USING gist (bbox);
+CREATE INDEX city_boundary_idx ON public.city USING gist (boundary);
 
 
 --- TABLE: Area Land Use Grid
@@ -633,3 +633,37 @@ INSERT INTO parameter ("name", "table", "value")
         ('vegetation_shadow', 'agricultural_areas', 1),
         ('vegetation_shadow', 'built_up', 1),
         ('vegetation_shadow', 'built_open_spaces', 1);
+
+
+
+--- This function creates a new table 'new_table' taking as basis the structure of the 'source_table'. 
+--- Taken from here: https://stackoverflow.com/questions/23693873/how-to-copy-structure-of-one-table-to-another-with-foreign-key-constraints-in-ps
+--- Important assumption: source table foreign keys have correct names i.e. their names contain source table name (what is a typical situation).
+--- Example usage: 
+---     create table base_table (base_id int primary key);
+---     create table source_table (id int primary key, base_id int references base_table);
+---     select create_table_like('source_table', 'new_table');
+
+
+create or replace function create_table_like(source_table text, new_table text)
+returns void language plpgsql
+as $$
+declare
+    rec record;
+begin
+    execute format(
+        'create table %s (like %s including all)',
+        new_table, source_table);
+    for rec in
+        select oid, conname
+        from pg_constraint
+        where contype = 'f' 
+        and conrelid = source_table::regclass
+    loop
+        execute format(
+            'alter table %s add constraint %s %s',
+            new_table,
+            replace(rec.conname, source_table, new_table),
+            pg_get_constraintdef(rec.oid));
+    end loop;
+end $$;
