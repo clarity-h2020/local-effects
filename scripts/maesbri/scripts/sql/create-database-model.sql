@@ -87,9 +87,10 @@ CREATE TABLE public.city (
     name CHARACTER VARYING(32) NOT NULL,
     code CHARACTER VARYING(7) UNIQUE NOT NULL,
     country_code CHARACTER VARYING(3) NOT NULL,
+    population INTEGER NOT NULL DEFAULT 0,
+    boundary GEOMETRY(MULTIPOLYGON,3035) NOT NULL,
     bbox GEOMETRY(POLYGON,3035) NOT NULL,
-    boundary GEOMETRY(POLYGON,3035) NOT NULL,
-        
+
     CONSTRAINT city_id_pkey PRIMARY KEY (id)
 );
 
@@ -105,7 +106,6 @@ CREATE INDEX city_code_idx ON public.city USING gist (code);
 CREATE INDEX city_country_code_idx ON public.city USING gist (country_code);
 CREATE INDEX city_bbox_idx ON public.city USING gist (bbox);
 CREATE INDEX city_boundary_idx ON public.city USING gist (boundary);
-
 
 --- TABLE: Area Land Use Grid
 DROP TABLE IF EXISTS public.land_use_area;
@@ -634,6 +634,10 @@ INSERT INTO parameter ("name", "table", "value")
         ('vegetation_shadow', 'built_up', 1),
         ('vegetation_shadow', 'built_open_spaces', 1);
 
+
+CREATE FUNCTION get_parameter_value(parameter_name text, table_name text) RETURNS numeric AS $$
+    SELECT p.value FROM parameter p WHERE p.name = parameter_name AND p.table = table_name;
+$$ LANGUAGE SQL;
 
 
 --- This function creates a new table 'new_table' taking as basis the structure of the 'source_table'. 
