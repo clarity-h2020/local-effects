@@ -1,7 +1,7 @@
 
 --- insert in the city table the basic information about the current city being processed
-INSERT INTO city (name, code, country_code, bbox) 
-       VALUES (UPPER(:city_name), :city_code, :country_code, ST_MakeEnvelope(:bbox_xmin,:bbox_ymin,:bbox_xmax,:bbox_ymax,3035));
+INSERT INTO city (name, code, country_code, boundary, bbox) 
+       VALUES (UPPER(:city_name), :city_code, :country_code, ST_GeomFromText(:city_boundary), ST_Envelope(ST_GeomFromText(:city_boundary)));
 
 --- define a temporary variable "city_grid" with the LAEA grid cells that intersect with the city bbox
 DROP TABLE IF EXISTS __city_grid;
