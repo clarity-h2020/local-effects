@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./env.sh
+. ./env.sh
 
 export CHECK_DISK_FREE_SPACE='NO'
 
@@ -13,6 +13,14 @@ function get_extent() {
   echo "${file} --> extent: ${extent[@]}"
 
   return extent
+}
+
+function get_geometry_as_wkt() {
+  local shpfile = $1
+  #Please, note that there are two blank spaces in the grep regular expression, this is necessary to find where the MULTIPOLYGON geometry string starts
+  local wkt_geometry = `ogrinfo -ro -nomd -noextent -al -geom=ISO_WKT ${shpfile} | grep '^  MULTIPOLYGON'`
+
+  return wkt_geometry
 }
 
 
@@ -54,17 +62,24 @@ do
   mkdir -p ${DATA_TMP_CITY_URBAN_ATLAS}
   # extract from the large "urban-atlas-2012.zip" file the specific city .zip file
   unzip -j ${DATA_URBAN_ATLAS_ZIPFILE} "*${city_name}*.zip" -d ${DATA_TMP_CITY_URBAN_ATLAS}
-  # and then extract only for that city the shapefile files with all the cartography
-  unzip -j ${DATA_TMP_CITY_URBAN_ATLAS}/*${city_name}*.zip "*${city_name}*/Shapefiles/*${city_name}*_UA2012.*" -d ${DATA_TMP_CITY_URBAN_ATLAS}
+  # and then extract only for that city the shapefile files with all the cartography and the boundaries
+  unzip -j ${DATA_TMP_CITY_URBAN_ATLAS}/*${city_name}*.zip "*${city_name}*/Shapefiles/*${city_name}*_UA2012*" -d ${DATA_TMP_CITY_URBAN_ATLAS}
   rm ${DATA_TMP_CITY_URBAN_ATLAS}/*${city_name}*.zip
  
-  ua_shpfile=`ls ${DATA_TMP_CITY_URBAN_ATLAS}/*.shp`
+  ua_boundary_shpfile=`ls ${DATA_TMP_CITY_URBAN_ATLAS}/*UA2012_Boundary.shp`
+
+  ua_shpfile=`ls ${DATA_TMP_CITY_URBAN_ATLAS}/*UA2012.shp`
   ua_table=`echo $(basename "${ua_shpfile%.shp}")`
 
-  # get the bbox of the city
-  IFS=',' read -r -a extent <<< `ogrinfo -ro -so -al ${ua_shpfile} | grep "Extent" | sed 's/[a-zA-Z\: ]//g' | sed 's/)\-(/,/g' | sed 's/[()]//g'`
-  echo "${ua_shpfile} --> extent: ${extent[@]}"
+  # get the city boundary
+  city_boundary_wkt = `ogrinfo -ro -nomd -noextent -al -geom=ISO_WKT ${ua_boundary_shpfile} | grep '^  MULTIPOLYGON'`
+  echo "${ua_shpfile} --> boundary: ${city_boundary_wkt}"
 
+  # get the city bbox
+  IFS=',' read -r -a city_extent <<< `ogrinfo -ro -so -al ${ua_boundary_shpfile} | grep "Extent" | sed 's/[a-zA-Z\: ]//g' | sed 's/)\-(/,/g' | sed 's/[()]//g'`
+  echo "${ua_shpfile} --> extent: ${city_extent[@]}"
+
+  
   #############
   # STL
   #############
@@ -85,13 +100,13 @@ do
   #############  
 	echo -e "\e[36mClipping European Setlement Map data for the city (${city_name}) ...\e[0m"
   mkdir -p ${DATA_TMP_CITY_ESM}
-  echo ${extent[0]} ${extent[2]} ${extent[1]} ${extent[3]}
+  echo ${city_extent[0]} ${city_extent[2]} ${city_extent[1]} ${city_extent[3]}
 	#Extracting bbox from VRT mosaic index all raster ESM files for the city
   #gdal_translate -projwin MINX MAXY MAXX MINY file.vrt output.tif
   
-	gdal_translate -projwin ${extent[0]} ${extent[2]} ${extent[1]} ${extent[3]} ${DATA_TMP_ESM_CLASS_30}/class_30_index.vrt ${DATA_TMP_CITY_ESM}/class_30.tif
-	gdal_translate -projwin ${extent[0]} ${extent[2]} ${extent[1]} ${extent[3]} ${DATA_TMP_ESM_CLASS_40}/class_40_index.vrt ${DATA_TMP_CITY_ESM}/class_40.tif
-	gdal_translate -projwin ${extent[0]} ${extent[2]} ${extent[1]} ${extent[3]} ${DATA_TMP_ESM_CLASS_50}/class_50_index.vrt ${DATA_TMP_CITY_ESM}/class_50.tif
+	gdal_translate -projwin ${city_extent[0]} ${city_extent[2]} ${city_extent[1]} ${city_extent[3]} ${DATA_TMP_ESM_CLASS_30}/class_30_index.vrt ${DATA_TMP_CITY_ESM}/class_30.tif
+	gdal_translate -projwin ${city_extent[0]} ${city_extent[2]} ${city_extent[1]} ${city_extent[3]} ${DATA_TMP_ESM_CLASS_40}/class_40_index.vrt ${DATA_TMP_CITY_ESM}/class_40.tif
+	gdal_translate -projwin ${city_extent[0]} ${city_extent[2]} ${city_extent[1]} ${city_extent[3]} ${DATA_TMP_ESM_CLASS_50}/class_50_index.vrt ${DATA_TMP_CITY_ESM}/class_50.tif
 
   
 
@@ -120,10 +135,7 @@ do
        -v city_name="'${city_name}'" \
        -v city_code="'${city_code}'" \
        -v country_code="'${city_code:0:2}'" \
-       -v bbox_xmin="${extent[0]}" \
-       -v bbox_ymin="${extent[1]}" \
-       -v bbox_xmax="${extent[2]}" \
-       -v bbox_ymax="${extent[3]}" \
+       -v city_boundary="'${city_boundary}'" \
        -f ../sql/process-tmp-city-tables.sql
 
 done;
