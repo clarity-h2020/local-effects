@@ -10,8 +10,9 @@ export PGPORT='5432'
 
 
 # Data sources
-export DATA_ROOT='/media/maesbri/57AA17F37EE06F89/clarity/data'
-export DATA_LAEA_GRID_ZIPFILE=${DATA_ROOT}'/european-reference-grid/laea_etrs_500m.gpkg.zip'
+#export DATA_ROOT='/media/maesbri/57AA17F37EE06F89/clarity/data'
+export DATA_ROOT='/media/maesbri/cccc8404-88a5-4743-b56c-53ab3dd68475/clarity/data'
+export DATA_LAEA_GRID_ZIPFILE=${DATA_ROOT}'/european-reference-grid/laea_etrs_500m.zip'
 #export DATA_URBAN_ATLAS_ZIPFILE=${DATA_ROOT}'/urban-atlas/2012/urban-atlas-2012.zip'
 export DATA_URBAN_ATLAS_ZIPFILE=${DATA_ROOT}'/urban-atlas/2012/fake-urban-atlas-2012.zip'
 export DATA_ESM_ZIPFILE=${DATA_ROOT}'/european-settlement-map-2012-Rel2017/ESM2012_Rel2017_200km_10m.zip'
