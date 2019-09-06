@@ -5,4 +5,4 @@
 source ./env.sh
 
 # create the database table structure 
-psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} -f ../sql/create-database-model.sql
+psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -f ../sql/create-database-model.sql

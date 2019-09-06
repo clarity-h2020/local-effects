@@ -67,13 +67,13 @@ prepare_laea_data() {
 
   # perform clustering of the data and cleaning on the table based on the geohash index
   echo 'Clustering data in database ...'
-  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} -c "CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_geohash_idx;"
+  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_geohash_idx;"
   echo 'Vacuum analying data in database ...'
-  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} -c "VACUUM ANALYZE laea_etrs_500m;"
+  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "VACUUM ANALYZE laea_etrs_500m;"
 
 }
 
 
 
-#prepare_esm_data
+prepare_esm_data
 prepare_laea_data
