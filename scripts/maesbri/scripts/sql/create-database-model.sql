@@ -151,13 +151,13 @@ CREATE TABLE public.agricultural_areas (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo REAL DEFAULT 0.11,
-    emissivity REAL DEFAULT 0.95,
-    transmissivity REAL DEFAULT 0.25,
-    vegetation_shadow REAL DEFAULT 1.0,
-    run_off_coefficient REAL DEFAULT 0.1,
-    fua_tunnel REAL DEFAULT 1.0,
-    building_shadow SMALLINT DEFAULT 1,
+    albedo REAL NOT NULL DEFAULT 0.11,
+    emissivity REAL NOT NULL DEFAULT 0.95,
+    transmissivity REAL NOT NULL DEFAULT 0.25,
+    vegetation_shadow REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.1,
+    fua_tunnel REAL NOT NULL DEFAULT 1.0,
+    building_shadow SMALLINT NOT NULL DEFAULT 1,
 
     CONSTRAINT agricultural_areas_id_pkey PRIMARY KEY (id),
     CONSTRAINT agricultural_areas_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -205,14 +205,14 @@ CREATE TABLE public.built_open_spaces (
 
     area REAL,
     perimeter REAL,
-    albedo REAL DEFAULT 0.45,
-    emissivity REAL DEFAULT 0.9,
-    transmissivity REAL DEFAULT 0.05,
-    vegetation_shadow REAL DEFAULT 1.0,
-    run_off_coefficient REAL DEFAULT 0.75,
-    fua_tunnel REAL DEFAULT 1.0,
-    building_shadow SMALLINT DEFAULT 1,
-    hillshade_building REAL DEFAULT 1.0,
+    albedo REAL NOT NULL DEFAULT 0.45,
+    emissivity REAL NOT NULL DEFAULT 0.9,
+    transmissivity REAL NOT NULL DEFAULT 0.05,
+    vegetation_shadow REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.75,
+    fua_tunnel REAL NOT NULL DEFAULT 1.0,
+    building_shadow SMALLINT NOT NULL DEFAULT 1,
+    hillshade_building REAL NOT NULL DEFAULT 1.0,
 
     CONSTRAINT built_open_spaces_id_pkey PRIMARY KEY (id),
     CONSTRAINT built_open_spaces_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -236,13 +236,13 @@ CREATE TABLE public.built_up (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),    
     
-    albedo REAL DEFAULT 0.2,
-    emissivity REAL DEFAULT 0.85,
-    transmissivity REAL DEFAULT 0.01,
-    vegetation_shadow REAL DEFAULT 1.0,
-    run_off_coefficient REAL DEFAULT 0.9,
-    fua_tunnel REAL DEFAULT 1.0,
-    building_shadow SMALLINT DEFAULT 1,
+    albedo REAL NOT NULL DEFAULT 0.2,
+    emissivity REAL NOT NULL DEFAULT 0.85,
+    transmissivity REAL NOT NULL DEFAULT 0.01,
+    vegetation_shadow REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.9,
+    fua_tunnel REAL NOT NULL DEFAULT 1.0,
+    building_shadow SMALLINT NOT NULL DEFAULT 1,
 
     CONSTRAINT built_up_id_pkey PRIMARY KEY (id),
     CONSTRAINT built_up_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -266,11 +266,11 @@ CREATE TABLE public.dense_urban_fabric (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo REAL DEFAULT 0.065,
-    emissivity REAL DEFAULT 0.9,
-    transmissivity REAL DEFAULT 1.4,
-    run_off_coefficient REAL DEFAULT 0.7,
-    context REAL DEFAULT 1.0,
+    albedo REAL NOT NULL DEFAULT 0.065,
+    emissivity REAL NOT NULL DEFAULT 0.9,
+    transmissivity REAL NOT NULL DEFAULT 1.4,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.7,
+    context REAL NOT NULL DEFAULT 1.0,
 
     CONSTRAINT dense_urban_fabric_id_pkey PRIMARY KEY (id),
     CONSTRAINT dense_urban_fabric_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -295,11 +295,11 @@ CREATE TABLE public.low_urban_fabric (
     cityid BIGINT NOT NULL,
     cellid BIGINT NOT NULL,
 
-    albedo REAL DEFAULT 0.15,
-    emissivity REAL DEFAULT 0.9,
-    transmissivity REAL DEFAULT 1.0,
-    run_off_coefficient REAL DEFAULT 0.4,
-    context REAL DEFAULT 0.5,
+    albedo REAL NOT NULL DEFAULT 0.15,
+    emissivity REAL NOT NULL DEFAULT 0.9,
+    transmissivity REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.4,
+    context REAL NOT NULL DEFAULT 0.5,
 
     CONSTRAINT low_urban_fabric_id_pkey PRIMARY KEY (id),
     CONSTRAINT low_urban_fabric_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -323,11 +323,11 @@ CREATE TABLE public.medium_urban_fabric (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo REAL DEFAULT 0.11,
-    emissivity REAL DEFAULT 0.9,
-    transmissivity REAL DEFAULT 1.2,
-    run_off_coefficient REAL DEFAULT 0.5,
-    context REAL DEFAULT 0.8,
+    albedo REAL NOT NULL DEFAULT 0.11,
+    emissivity REAL NOT NULL DEFAULT 0.9,
+    transmissivity REAL NOT NULL DEFAULT 1.2,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.5,
+    context REAL NOT NULL DEFAULT 0.8,
 
     CONSTRAINT medium_urban_fabric_id_pkey PRIMARY KEY (id),
     CONSTRAINT medium_urban_fabric_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -351,11 +351,11 @@ CREATE TABLE public.public_military_industrial (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo real DEFAULT 0.13,
-    emissivity real DEFAULT 0.9,
-    transmissivity real DEFAULT 1.0,
-    run_off_coefficient real DEFAULT 0.5,
-    context real DEFAULT 0.5,
+    albedo REAL NOT NULL DEFAULT 0.13,
+    emissivity REAL NOT NULL DEFAULT 0.9,
+    transmissivity REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.5,
+    context REAL NOT NULL DEFAULT 0.5,
 
     CONSTRAINT public_military_industrial_id_pkey PRIMARY KEY (id),
     CONSTRAINT public_military_industrial_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -379,13 +379,13 @@ CREATE TABLE public.railways (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo REAL DEFAULT 0.2,
-    emissivity REAL DEFAULT 0.85,
-    transmissivity REAL DEFAULT 0.15,
-    vegetation_shadow REAL DEFAULT 1.0,
-    run_off_coefficient REAL DEFAULT 0.2,
-    fua_tunnel REAL DEFAULT 1.0,
-    building_shadow SMALLINT DEFAULT 1,
+    albedo REAL NOT NULL DEFAULT 0.2,
+    emissivity REAL NOT NULL DEFAULT 0.85,
+    transmissivity REAL NOT NULL DEFAULT 0.15,
+    vegetation_shadow REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.2,
+    fua_tunnel REAL NOT NULL DEFAULT 1.0,
+    building_shadow SMALLINT NOT NULL DEFAULT 1,
 
     CONSTRAINT railways_id_pkey PRIMARY KEY (id),
     CONSTRAINT railways_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -409,14 +409,14 @@ CREATE TABLE public.roads (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo REAL DEFAULT 0.1,
-    emissivity REAL DEFAULT 0.9,
-    transmissivity REAL DEFAULT 0.15,
-    vegetation_shadow REAL DEFAULT 1.0,
-    run_off_coefficient REAL DEFAULT 0.9,
-    fua_tunnel REAL DEFAULT 1.0,
-    building_shadow SMALLINT DEFAULT 1,
-    hillshade_building REAL DEFAULT 1.0,
+    albedo REAL NOT NULL DEFAULT 0.1,
+    emissivity REAL NOT NULL DEFAULT 0.9,
+    transmissivity REAL NOT NULL DEFAULT 0.15,
+    vegetation_shadow REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.9,
+    fua_tunnel REAL NOT NULL DEFAULT 1.0,
+    building_shadow SMALLINT NOT NULL DEFAULT 1,
+    hillshade_building REAL NOT NULL DEFAULT 1.0,
 
     CONSTRAINT roads_id_pkey PRIMARY KEY (id),
     CONSTRAINT roads_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -441,8 +441,8 @@ CREATE TABLE public.streams (
     geom GEOMETRY(LineString,3035), --- geom GEOMETRY(MultiLineString,3035)
 
     stream_type CHARACTER VARYING(254),
-    start_height NUMERIC DEFAULT 0.0,
-    end_height NUMERIC DEFAULT 0.0,
+    start_height NUMERIC NOT NULL DEFAULT 0.0,
+    end_height NUMERIC NOT NULL DEFAULT 0.0,
 
     CONSTRAINT streams_id_pkey PRIMARY KEY (id),
     CONSTRAINT streams_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -466,14 +466,14 @@ CREATE TABLE public.trees (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo REAL DEFAULT 0.13,
-    emissivity REAL DEFAULT 0.97,
-    transmissivity REAL DEFAULT 0.25,
-    vegetation_shadow REAL DEFAULT 0.0,
-    run_off_coefficient REAL DEFAULT 0.05,
-    fua_tunnel REAL DEFAULT 1.0,
-    building_shadow SMALLINT DEFAULT 1,
-    hillshade_green_fraction REAL DEFAULT 0.37,
+    albedo REAL NOT NULL DEFAULT 0.13,
+    emissivity REAL NOT NULL DEFAULT 0.97,
+    transmissivity REAL NOT NULL DEFAULT 0.25,
+    vegetation_shadow REAL NOT NULL DEFAULT 0.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.05,
+    fua_tunnel REAL NOT NULL DEFAULT 1.0,
+    building_shadow SMALLINT NOT NULL DEFAULT 1,
+    hillshade_green_fraction REAL NOT NULL DEFAULT 0.37,
 
     CONSTRAINT trees_pkey PRIMARY KEY (id),
     CONSTRAINT trees_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -497,13 +497,13 @@ CREATE TABLE public.vegetation (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo REAL DEFAULT 0.21,
-    emissivity REAL DEFAULT 0.96,
-    transmissivity REAL DEFAULT 0.30,
-    vegetation_shadow REAL DEFAULT 1.0,
-    run_off_coefficient REAL DEFAULT 0.18,
-    fua_tunnel REAL DEFAULT 1.0,
-    building_shadow SMALLINT DEFAULT 1,
+    albedo REAL NOT NULL DEFAULT 0.21,
+    emissivity REAL NOT NULL DEFAULT 0.96,
+    transmissivity REAL NOT NULL DEFAULT 0.30,
+    vegetation_shadow REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.18,
+    fua_tunnel REAL NOT NULL DEFAULT 1.0,
+    building_shadow SMALLINT NOT NULL DEFAULT 1,
 
     CONSTRAINT vegetation_id_pkey PRIMARY KEY (id),
     CONSTRAINT vegetation_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -527,13 +527,13 @@ CREATE TABLE public.water (
     cellid BIGINT NOT NULL,
     geom GEOMETRY(MULTIPOLYGON,3035),
 
-    albedo REAL DEFAULT 0.07,
-    emissivity REAL DEFAULT 0.96,
-    transmissivity REAL DEFAULT 0.5,
-    vegetation_shadow REAL DEFAULT 1.0,
-    run_off_coefficient REAL DEFAULT 0.1,
-    fua_tunnel REAL DEFAULT 1.0,
-    building_shadow SMALLINT DEFAULT 1,
+    albedo REAL NOT NULL DEFAULT 0.07,
+    emissivity REAL NOT NULL DEFAULT 0.96,
+    transmissivity REAL NOT NULL DEFAULT 0.5,
+    vegetation_shadow REAL NOT NULL DEFAULT 1.0,
+    run_off_coefficient REAL NOT NULL DEFAULT 0.1,
+    fua_tunnel REAL NOT NULL DEFAULT 1.0,
+    building_shadow SMALLINT NOT NULL DEFAULT 1,
 
     CONSTRAINT water_id_pkey PRIMARY KEY (id),
     CONSTRAINT water_cellid_fkey FOREIGN KEY (cellid) REFERENCES public.laea_etrs_500m (fid),
@@ -597,10 +597,10 @@ INSERT INTO parameter ("name", "table", "value")
         ('fua_tunnel', 'medium_urban_fabric', 1.1),
         ('fua_tunnel', 'low_urban_fabric', 1.0),
         ('fua_tunnel', 'public_military_industrial', 1.0),
-        ('hillshade_buildings', 'dense_urban_fabric', 0.6),
-        ('hillshade_buildings', 'medium_urban_fabric', 0.8),
-        ('hillshade_buildings', 'low_urban_fabric', 0.9),
-        ('hillshade_buildings', 'public_military_industrial', 0.9),
+        ('hillshade_building', 'dense_urban_fabric', 0.6),
+        ('hillshade_building', 'medium_urban_fabric', 0.8),
+        ('hillshade_building', 'low_urban_fabric', 0.9),
+        ('hillshade_building', 'public_military_industrial', 0.9),
         ('runoff', 'water', 0.1),
         ('runoff', 'roads', 0.9),
         ('runoff', 'railways', 0.2),
@@ -635,7 +635,7 @@ INSERT INTO parameter ("name", "table", "value")
         ('vegetation_shadow', 'built_open_spaces', 1);
 
 
-CREATE FUNCTION get_parameter_value(parameter_name text, table_name text) RETURNS numeric AS $$
+CREATE OR REPLACE FUNCTION get_parameter_value(parameter_name text, table_name text) RETURNS numeric AS $$
     SELECT p.value FROM parameter p WHERE p.name = parameter_name AND p.table = table_name;
 $$ LANGUAGE SQL;
 
@@ -649,9 +649,9 @@ $$ LANGUAGE SQL;
 ---     select create_table_like('source_table', 'new_table');
 
 
-create or replace function create_table_like(source_table text, new_table text)
-returns void language plpgsql
-as $$
+CREATE OR REPLACE FUNCTION create_table_like(source_table text, new_table text)
+RETURNS void LANGUAGE plpgsql
+AS $$
 declare
     rec record;
 begin
