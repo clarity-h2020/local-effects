@@ -123,7 +123,7 @@ do
 
    
   # Create the temporal tables structure in the database for processing the current city
-  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} -f ../sql/create-tmp-city-tables.sql
+  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -f ../sql/create-tmp-city-tables.sql
 
   # Insert in temporary "__urban_atlas" table the land use features needed for the processing
   echo "Inserting urban atlas data in database for city (${city_name}) ..."
@@ -132,17 +132,30 @@ do
          -progress -append -nln __urban_atlas ${ua_shpfile}
 
 
-  # Insert in temporary "__street_trees" table the tree features needed for the processing
-  echo "Inserting street trees data in database for city (${city_name}) ..."
+  # Merge in temporary "__urban_atlas" table the street tree layers shapefile information
+  # * First, add a "code" column so we can insert the same code ('31000') used to identify the trees in the urban atlas shapefile
+  # * Second, insert the information in "__urban_atlas" table
+  echo "Merging in temporary '__urban_atlas' table the street tree layers shapefile information in database for city (${city_name}) ..."
+  ogrinfo ${stl_shpfile} -sql "ALTER TABLE ${stl_table} ADD COLUMN CODE VARCHAR(7)"
+  ogrinfo ${stl_shpfile} -dialect SQLite -sql "UPDATE '${stl_table}' SET CODE = '31000'"
   ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" \
-          -sql "SELECT COUNTRY FROM ${stl_table}" \
-          -progress -append -nln __street_trees ${stl_shpfile}
+          -sql "SELECT CODE AS featuretype_code FROM ${stl_table}" \
+          -progress -append -nln __urban_atlas ${stl_shpfile}
+
+  
+  
+  # Insert in temporary "__street_trees" table the tree features needed for the processing
+  # echo "Inserting street trees data in database for city (${city_name}) ..."
+  # ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" \
+  #         -sql "SELECT COUNTRY FROM ${stl_table}" \
+  #         -progress -append -nln __street_trees ${stl_shpfile}
 
 
   # Let's process all required layers for the city
   echo "Processing all required layers in database for city (${city_name}) ..."
   psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} \
        -v city_code="'${city_code}'" \
+       --echo-all \
        -f ../sql/process-tmp-city-tables.sql
 
 done;
