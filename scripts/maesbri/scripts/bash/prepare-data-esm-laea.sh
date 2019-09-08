@@ -60,14 +60,14 @@ prepare_laea_data() {
   unzip ${DATA_LAEA_GRID_ZIPFILE} -d ${DATA_TMP_LAEA_GRID}
   
   echo 'Ingesting LAEA 500m grid data into database ...'
-  ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" -progress -append -nln laea_etrs_500m ${DATA_TMP_LAEA_GRID}'/laea_etrs_500m.gpkg'
+  ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" -progress -append -gt 20000 -nln laea_etrs_500m ${DATA_TMP_LAEA_GRID}'/laea_etrs_500m.gpkg'
 
   # remove the European Reference Grid file
   rm -r ${DATA_TMP_LAEA_GRID}
 
   # perform clustering of the data and cleaning on the table based on the geohash index
   echo 'Clustering data in database ...'
-  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geom_geohash_idx;"
+  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geohash_idx;"
   echo 'Vacuum analying data in database ...'
   psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "VACUUM ANALYZE laea_etrs_500m;"
 
@@ -75,5 +75,5 @@ prepare_laea_data() {
 
 
 
-prepare_esm_data
+#prepare_esm_data
 prepare_laea_data
