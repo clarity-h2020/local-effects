@@ -114,33 +114,33 @@ do
 	gdal_translate -projwin ${city_extent[0]} ${city_extent[2]} ${city_extent[1]} ${city_extent[3]} ${DATA_TMP_ESM_CLASS_50}/class_50_index.vrt ${DATA_TMP_CITY_ESM}/class_50.tif
 
   
-  # Insert current city basic information in the temporal __city table
-  echo "Inserting current city (${city_name}) basic information in general city table ..."
-
+  # Insert current city basic information in the temporal tmp_city table
+  echo "Inserting current city (${city_name}) basic information in tmp_city table ..."
   ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" \
-          -sql "SELECT FUA_NAME as name, FUA_CODE as code, COUNTRY as country_code, POP2012 as population FROM ${ua_boundary_table}" \
-          -progress -overwrite -nlt MULTIPOLYGON -nln __city ${ua_boundary_shpfile}
+          -sql "SELECT FUA_NAME as name, FUA_CODE as code, COUNTRY as countrycode, POP2012 as population FROM ${ua_boundary_table}" \
+          -progress -overwrite -nlt MULTIPOLYGON -nln tmp_city ${ua_boundary_shpfile}
 
    
   # Create the temporal tables structure in the database for processing the current city
-  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -f ../sql/create-tmp-city-tables.sql
+  echo "Creating for current city (${city_name}) all necessary temporal urban atlas tables ('tmp_ua_')..."
+  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -f ../sql/create-tmp-ua-tables.sql
 
-  # Insert in temporary "__urban_atlas" table the land use features needed for the processing
+  # Insert in temporary "tmp_ua" table the land use features needed for the processing
   echo "Inserting urban atlas data in database for city (${city_name}) ..."
   ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" \
-         -sql "SELECT CODE2012 AS featuretype_code FROM ${ua_table}" \
-         -progress -append -nln __urban_atlas ${ua_shpfile}
+         -sql "SELECT CODE2012 AS ftcode FROM ${ua_table}" \
+         -progress -append -nln tmp_ua ${ua_shpfile}
 
 
-  # Merge in temporary "__urban_atlas" table the street tree layers shapefile information
+  # Merge in temporary "tmp_ua" table the street tree layers shapefile information
   # * First, add a "code" column so we can insert the same code ('31000') used to identify the trees in the urban atlas shapefile
-  # * Second, insert the information in "__urban_atlas" table
+  # * Second, insert the information in "tmp_ua" table
   echo "Merging in temporary '__urban_atlas' table the street tree layers shapefile information in database for city (${city_name}) ..."
   ogrinfo ${stl_shpfile} -sql "ALTER TABLE ${stl_table} ADD COLUMN CODE VARCHAR(7)"
   ogrinfo ${stl_shpfile} -dialect SQLite -sql "UPDATE '${stl_table}' SET CODE = '31000'"
   ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" \
-          -sql "SELECT CODE AS featuretype_code FROM ${stl_table}" \
-          -progress -append -nln __urban_atlas ${stl_shpfile}
+          -sql "SELECT CODE AS ftcode FROM ${stl_table}" \
+          -progress -append -nln tmp_ua ${stl_shpfile}
 
   
   
@@ -154,9 +154,8 @@ do
   # Let's process all required layers for the city
   echo "Processing all required layers in database for city (${city_name}) ..."
   psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} \
-       -v city_code="'${city_code}'" \
+       -v citycode="'${city_code}'" \
        --echo-all \
-       -f ../sql/process-tmp-city-tables.sql
+       -f ../sql/process-tmp-ua-tables.sql
 
 done;
-
