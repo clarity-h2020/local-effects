@@ -2,11 +2,12 @@ version: '3.3'
 
 services:
 
-  postgis:
+  postgisdb:
     hostname: postgis
     build:
       #context: ./postgis_11-2.5/alpine
-      context: ./postgis_11-2.5
+      #context: ./postgis_11-2.5
+      context: ./postgis_12-3.0
     environment:
         # THIS IS MADNESS: envs need to be ordered POSTGRES_DB > POSTGRES_USER > POSTGRES_PASSWORD.
         # https://github.com/docker-library/postgres/issues/41#issuecomment-382925263
@@ -46,10 +47,17 @@ services:
       - "max_parallel_workers_per_gather=4"
       - "-c"
       - "max_parallel_workers=8"
+      - "-c"
+      #- "shared_preload_libraries=pg_partman_bgw, pg_stat_statements, pg_qualstats, pg_stat_kcache, pg_wait_sampling"
+      - "shared_preload_libraries=pg_partman_bgw, pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.max=10000"
+      - "-c"
+      - "pg_stat_statements.track=all"
     ports:
       - 5432:5432
     volumes:
-      - ${BASE_DIR}/postgresql/data:/var/lib/postgresql/data/pgdata
+      - ${BASE_DIR}/postgresql-${POSTGRES_VERSION}/data:/var/lib/postgresql/data/pgdata
       - type: tmpfs
         target: /tmp
     restart: unless-stopped
@@ -62,5 +70,5 @@ services:
     ports:
       - 80:80
     depends_on:
-      - postgis
+      - postgisdb
     restart: unless-stopped
