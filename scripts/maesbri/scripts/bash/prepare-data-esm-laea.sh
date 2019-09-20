@@ -60,17 +60,25 @@ prepare_laea_data() {
   unzip ${DATA_LAEA_GRID_ZIPFILE} -d ${DATA_TMP_LAEA_GRID}
   
   echo 'Ingesting LAEA 500m grid data into database ...'
-  ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" -progress -append -gt 20000 -nln laea_etrs_500m ${DATA_TMP_LAEA_GRID}'/laea_etrs_500m.gpkg'
+  ogr2ogr PG:"dbname=${PGDATABASE} host=${PGHOST} port=${PGPORT} user=${PGUSER} password=${PGPASSWORD}" -progress -append -nln laea_etrs_500m ${DATA_TMP_LAEA_GRID}'/laea_etrs_500m.gpkg'
 
   # remove the European Reference Grid file
   rm -r ${DATA_TMP_LAEA_GRID}
 
   # perform clustering of the data and cleaning on the table based on the geohash index
-  echo 'Clustering data in database ...'
-  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "CLUSTER public.laea_etrs_500m USING laea_etrs_500m_geohash_idx;"
-  echo 'Vacuum analying data in database ...'
-  psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "VACUUM ANALYZE laea_etrs_500m;"
-
+  eorigin=( "e09" "e17" "e25" "e33" "e41" "e49" "e57" "e66" "exx" )
+  norigin=( "n09" "n17" "n26" "n35" "n44" "n54" "nxx")
+  for e in "${eorigin[@]}"
+  do
+    for n in "${norigin[@]}"
+    do
+      tablename="laea_etrs_500m_${e}${n}"
+      echo 'Clustering table ' ${tablename}
+      psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "CLUSTER ${tablename} USING ${tablename}_geohash_idx;"
+      echo 'Vacuum analyzing data in table ' ${tablename}
+      psql -U ${PGUSER} -h ${PGHOST} -p ${PGPORT} -d ${PGDATABASE} --echo-all -c "VACUUM ANALYZE ${tablename};"
+    done
+  done
 }
 
 
