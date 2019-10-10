@@ -53,6 +53,7 @@ then
 #        	echo -e "\e[33mERROR: pluvial flood city data not found!\e[0m"
 #	fi
 
+	echo $CITY "land use grid generation completed!"
 else
 	echo -e "\e[33mERROR: no data found for "$CITY"\e[0m"
 fi

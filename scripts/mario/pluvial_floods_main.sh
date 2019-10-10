@@ -117,10 +117,12 @@ then
                 psql -U "postgres" -d "clarity" -c "DROP TABLE streams_"$CITY_low";"
 
 		#delete city data
-##	        rm -r $DATA
-	        echo -e "\e[36mGeneration completed for "$CITY"\e[0m"
+	        #rm -r $DATA/dem
+
 		#REGISTER THAT NEEDED DATA IS PREPARED FOR THE CITY
                 psql -U "postgres" -d "clarity" -c "UPDATE city SET pluvial_flood=TRUE WHERE NAME='"$CITY"';"
+
+		echo -e "\e[36mGeneration completed for "$CITY"\e[0m"
 	fi
 else
 	echo -e "\e[33mERROR: No data avaiable in the file system for "$CITY"!\e[0m"

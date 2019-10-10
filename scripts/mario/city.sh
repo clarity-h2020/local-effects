@@ -22,7 +22,7 @@ STREAMS_FOLDER=$DATA"/pluvial_floods/streams"
 #Create city table in postgresql if it does not exists
 psql -U "postgres" -d "clarity" -c "SELECT to_regclass('public.city');" > city.out
 FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`
-#rm city.out
+rm city.out
 if [ "$FOUND" != 'city' ];
 then
 	echo "Creating table CITY..."

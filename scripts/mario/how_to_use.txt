@@ -17,25 +17,44 @@ Analysis of Urban Atlas, European Settlement Maps and Street Tree Layer data sou
 As well it generates table where all found cities are stored with its BBOX and flags to know if a city has been processed for pluvial floods or heat waves.
 
 #5
-pluvial_flood_main.sh
-For a given city it gathers needed data from database and process it to generate final data for streams and basins related to the given city, storying results in corresponding database tables
-
-#6
+load_all.sh
+This script checks database to see which heat wave and pluvial flood data is already calculated for the citties in the system, then takes those one which are not calculated and
+calls for the rest of the scripts to do the calculation as follows:
+------
+#5.1
 heat_waves_main.sh
 For a given city it gathers needed data from file system, preparing it for further processing and calls to layers9_12 then call land use scripts(12).
 
-#7
+#5.1.1
 layers9_12.sh
 For a given city and by using prepared data for the city in the file system, it is able to generate and store it in database data corresponding to layers 9,10,11 and 12 
 all toghether to support each future single layer processing.
 
-#8 Land use scripts
+#5.1.2 Land use scripts
 (water.sh,roads.sh,railways.sh,trees.sh,vegetation.sh,agricultural_areas.sh,built_up.sh,built_open_spaces.sh,dense_urban_fabric.sh,medium_urban_fabric.sh,low_urban_fabric.sh,public_military_industrial.sh)
 Each one of those can generate its corresponding land use data for a given city and store it in database corresponding final table
 
-#9
+#5.2
+pluvial_flood_main.sh
+For a given city it gathers needed data from database and process it to generate final data for streams and basins related to the given city, storying results in corresponding database tables
+
+#5.3
 grid_land_use.sh
 Generates a given city grid with corresponding land use percentages in each cell
+-----
 
+#N
+load_city.sh
+This script is able to load into the database all data for a specific city given as paramater.
 
+#N
+delete_city.sh
+This script is able to delete from database all auxuliary tables, and all goemetries from final tables, for every layer as well as local auxiliary files in data folder for a given city name.
 
+------
+
+start_load.sh
+Just to call load_all.sh but to in background mode
+
+stop_load.sh
+just reminders of wichi console commands to use in order to stop load_all.sh running background.
