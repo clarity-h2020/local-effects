@@ -8,14 +8,25 @@ if [[ $# -eq 0 ]] ; then
     exit 1
 fi
 CITY=$(echo "$1" | awk '{print toupper($0)}')
-FOLDER="data/"$CITY"/esm"
-#FILE=`ls -la $FOLDER/class30_$CITY.tif | cut -f 9 -d ' '`
-FILE=`ls -la $FOLDER/class30_$CITY.tif | rev | cut -f 1 -d ' ' | rev`
-NAME=`echo $FILE | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
-NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
+#UA
+FOLDER="data/"$CITY"/ua"
+FILE=`ls -la $FOLDER/*.shp | cut -f 2 -d ':' | cut -f 2 -d ' '`
 if [ ! "$FILE" ]; then
-    echo -e "\e[33mERROR: City data not found!\e[0m"
+    echo -e "\e[33mERROR: City UA data not found!\e[0m"
 else
+SHP=`ogrinfo $FILE | grep '1:' | cut -f 2 -d ' '`
+NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
+
+#ESM30 RASTER
+FOLDER2="data/"$CITY"/esm"
+FILE2=`ls -la $FOLDER2/class30_$CITY.tif | rev | cut -f 1 -d ' ' | rev`
+if [ ! "$FILE2" ]; then
+    echo -e "\e[33mERROR: City ESM data not found!\e[0m"
+else
+NAME2=`echo $FILE2 | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
+NAME2=$(echo $NAME2 | awk '{print tolower($0)}')
+TIF=$NAME"_calculated.TIF"
+SHP2=$NAME"_calculated.shp"
 
 ###############
 # GRASS SETUP #
@@ -69,12 +80,17 @@ echo -e "\e[36mgrass configuration done\e[0m"
 # BUILT_OPEN_SPACES SCRIPT START #
 ##################################
 
-TIF=$NAME"_calculated.TIF"
-SHP=$NAME"_calculated.shp"
+#URBAN ATLAS (13300 construction sites)
+echo -e "\e[36m...Extract Urban Atlas data...\e[0m"
+ogr2ogr -overwrite -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='13300'" $NAME $FILE
+shp2pgsql -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
+rm -r $NAME
+psql -d clarity -U postgres -f $NAME".sql"
+rm $NAME".sql"
 
 #raster reclassification with treshold 30
-NODATA=`gdalinfo $FILE | grep 'NoData' | cut -f 2 -d '='`
-python gdal_reclassify.py $FILE $TIF -r "$NODATA,1" -c "<30,>=30" -d $NODATA -n true -p "COMPRESS=LZW"
+NODATA=`gdalinfo $FILE2 | grep 'NoData' | cut -f 2 -d '='`
+python gdal_reclassify.py $FILE2 $TIF -r "$NODATA,1" -c "<30,>=30" -d $NODATA -n true -p "COMPRESS=LZW"
 
 #raster parameters needed for polygonization
 LAT=`gdalinfo $TIF | grep 'latitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
@@ -93,18 +109,20 @@ g.proj -c proj4="+proj=laea +lat_0=$LAT +lon_0=$LON +x_0=$X +y_0=$Y +ellps=GRS80
 r.external input="$TIF" band=1 output=rast_5bd8903d0a6372 --overwrite -o
 g.region n=$N s=$S e=$E w=$W res=$RES
 r.to.vect input=rast_5bd8903d0a6372 type="area" column="value" output=output08aad7e15cf0402da3436e32ac40c6c9 --overwrite
-v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP" format="ESRI_Shapefile" --overwrite
+v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP2" format="ESRI_Shapefile" --overwrite
+rm $TIF
 
-#result to databse
+#result to database
 echo -e "\e[36m...loading poligonization into database...\e[0m"
-shp2pgsql -k -s 3035 -I -d $SHP $NAME > $NAME.sql
-psql -d clarity -U postgres -f $NAME.sql
-rm $NAME"_calculated.TIF"
-rm $NAME"_calculated.shp"
-rm $NAME"_calculated.dbf"
-rm $NAME"_calculated.shx"
-rm $NAME"_calculated.prj"
-rm $NAME".sql"
+shp2pgsql -k -s 3035 -I -d $SHP2 $NAME2 > $NAME2.sql
+rm $NAME"_calculated".*
+psql -d clarity -U postgres -f $NAME2.sql
+rm $NAME2.*
+
+#Putting together ESM and UA extracted data
+echo -e "\e[36m...adding ESM data to previously generated UA data...\e[0m"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq') as gid, ST_Area(geom) as area, geom FROM public.\""$NAME2"\");"
+psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME2"\";"
 
 #FIT GEOMETRIES TO CITY BOUNDARY
 echo -e "\e[36m...deleting geometries out of boundary...\e[0m"
@@ -143,7 +161,8 @@ psql -U "postgres" -d "clarity" -c "DROP SEQUENCE IF EXISTS "$NAME"_grid_seq;"
 psql -U "postgres" -d "clarity" -c "CREATE TABLE "$NAME"_grid (LIKE "$NAME" INCLUDING ALL);"
 psql -U "postgres" -d "clarity" -c "CREATE SEQUENCE "$NAME"_grid_seq START WITH 1;"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME"_grid ALTER COLUMN gid SET DEFAULT nextval('"$NAME"_grid_seq');"
-psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME"_grid (geom,city,cell) (SELECT ST_Multi(ST_CollectionExtract(ST_Intersection(ST_MakeValid(ST_SnapToGrid(ST_Union(a.geom),0.0001)), m.geom),3)) as geom,"$ID" as city,m.gid as cell FROM "$NAME" a, laea_etrs_500m m, city c WHERE c.name='"$CITY"' AND ST_Intersects(c.boundary,m.geom) AND ST_Intersects(a.geom, m.geom) GROUP BY m.geom,m.gid);"
+#psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME"_grid (geom,city,cell) (SELECT ST_Multi(ST_CollectionExtract(ST_Intersection(ST_MakeValid(ST_SnapToGrid(ST_Union(a.geom),0.0001)), m.geom),3)) as geom,"$ID" as city, m.gid as cell FROM "$NAME" a, laea_etrs_500m m, city c WHERE c.id='"$ID"' AND ST_Intersects(c.boundary,m.geom) AND ST_Intersects(a.geom, m.geom) GROUP BY m.geom,m.gid);"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME"_grid (geom,city,cell) (SELECT ST_Multi(ST_CollectionExtract(ST_Intersection(ST_MakeValid(ST_SnapToGrid(ST_Union(a.geom),0.0001)), m.geom),3)) as geom, "$ID" as city, m.gid as cell FROM "$NAME" a, laea_etrs_500m m, land_use_grid l WHERE l.city="$ID" AND l.cell=m.gid AND ST_Intersects(a.geom, m.geom) GROUP BY m.geom,m.gid);"
 psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME";"
 NAME=$(echo $CITY"_"$LAYER"_GRID" | awk '{print tolower($0)}')
 
@@ -178,35 +197,35 @@ echo -e "\e[36m...removing vegetation intersections...\e[0m"
 psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT t.gid as id, ST_Multi(ST_CollectionExtract(ST_Difference(ST_MakeValid(ST_SnapToGrid(t.geom,0.0001)),ST_MakeValid(ST_SnapToGrid(r.geom,0.0001))),3) ) as geom FROM "$NAME" t, "$CITY"_vegetation r WHERE r.cell=t.cell) as sq WHERE gid=sq.id;"
 echo -e "\e[36m...removing agricultural areas intersections...\e[0m"
 psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT t.gid as id, ST_Multi(ST_CollectionExtract(ST_Difference(ST_MakeValid(ST_SnapToGrid(t.geom,0.0001)),ST_MakeValid(ST_SnapToGrid(r.geom,0.0001))),3) ) as geom FROM "$NAME" t, "$CITY"_agricultural_areas_grid r WHERE r.cell=t.cell) as sq WHERE gid=sq.id;"
-echo -e "\e[36m...removing built up intersections...\e[0m"
-psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT t.gid as id, ST_Multi(ST_CollectionExtract(ST_Difference(ST_MakeValid(ST_SnapToGrid(t.geom,0.0001)),ST_MakeValid(ST_SnapToGrid(r.geom,0.0001))),3) ) as geom FROM "$NAME" t, "$CITY"_built_up r WHERE r.cell=t.cell) as sq WHERE gid=sq.id;"
+#echo -e "\e[36m...removing built up intersections...\e[0m"
+#psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT t.gid as id, ST_Multi(ST_CollectionExtract(ST_Difference(ST_MakeValid(ST_SnapToGrid(t.geom,0.0001)),ST_MakeValid(ST_SnapToGrid(r.geom,0.0001))),3) ) as geom FROM "$NAME" t, "$CITY"_built_up r WHERE r.cell=t.cell) as sq WHERE gid=sq.id;"
 
 #FIX
 echo -e "\e[36m...fixing geometries by buffering...\e[0m"
 psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=St_MakeValid(geom);"
 #St_Multi(St_Buffer(geom,0.0001)));"
 
-#drop not needed columns
-echo -e "\e[36m...Dropping not needed columns...\e[0m"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" DROP COLUMN cat;"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" DROP COLUMN value;"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" DROP COLUMN label;"
-
 #PARAMETERS
 PARAMETERS="parameters"
+echo -e "\e[36m...Adding parameters...\e[0m"
 ALBEDO=`grep -i -F [$LAYER] $PARAMETERS/albedo.dat | cut -f 2 -d ' '`
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD albedo real DEFAULT "$ALBEDO";"
 EMISSIVITY=`grep -i -F [$LAYER] $PARAMETERS/emissivity.dat | cut -f 2 -d ' '`
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD emissivity real DEFAULT "$EMISSIVITY";"
 TRANSMISSIVITY=`grep -i -F [$LAYER] $PARAMETERS/transmissivity.dat | cut -f 2 -d ' '`
-VEGETATION_SHADOW=`grep -i -F [$LAYER] $PARAMETERS/vegetation_shadow.dat | cut -f 2 -d ' '`
-RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD transmissivity real DEFAULT "$TRANSMISSIVITY";"
 
-#add rest of the parameters to the layer
-echo -e "\e[36m...Adding other needed parameters...\e[0m"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD albedo real DEFAULT "$ALBEDO";"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD emissivity real DEFAULT "$EMISSIVITY";"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD transmissivity real DEFAULT "$TRANSMISSIVITY";"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD vegetation_shadow real DEFAULT "$VEGETATION_SHADOW";"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD run_off_coefficient real DEFAULT "$RUNOFF_COEFFICIENT";"
+#hillshade_buildings - NOW DONE FROM land use grid SCRIPT
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD hillshade_building real DEFAULT NULL;"
+
+HILLSHADE_GREEN_FRACTION=`grep -i -F [$LAYER] $PARAMETERS/hillshade_green_fraction.dat | cut -f 2 -d ' '`
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD hillshade_green_fraction real DEFAULT "$HILLSHADE_GREEN_FRACTION";"
+BUILDING_SHADOW=`grep -i -F [$LAYER] $PARAMETERS/building_shadow.dat | cut -f 2 -d ' '`
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD building_shadow real DEFAULT "$BUILDING_SHADOW";"
+VEGETATION_SHADOW=`grep -i -F [$LAYER] $PARAMETERS/vegetation_shadow.dat | cut -f 2 -d ' '`
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD vegetation_shadow real DEFAULT "$VEGETATION_SHADOW";"
+RUNOFF_COEFFICIENT=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD run_off_coefficient real DEFAULT "$RUNOFF_COEFFICIENT";"
 
 #Adding FUA_TUNNEL, apply 1 as default
 echo -e "\e[36m...Adding FUA_TUNNEL...\e[0m"
@@ -216,31 +235,10 @@ psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET fua_tunnel="
 FUA_TUNNEL=`grep -i -F ['medium_urban_fabric'] $PARAMETERS/fua_tunnel.dat | cut -f 2 -d ' '`
 psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET fua_tunnel="$FUA_TUNNEL" FROM "$CITY"_layers9_12 l WHERE "$CODE"='11220' AND ST_Intersects( x.geom , l.geom );"
 
-#building shadow 1 by default(not intersecting) then update with value 0 when intersecting
-echo -e "\e[36m...Adding building shadow...\e[0m"
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD building_shadow smallint DEFAULT 1;"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET building_shadow=0 FROM "$CITY"_layers9_12 l WHERE ST_Intersects( x.geom , l.geom );"
-
-echo -e "\e[36m...Adding hillshade building...\e[0m"
-#hillshade_building 1 by default then update depending on intersections
-psql -U "postgres" -d "clarity" -c "ALTER TABLE public.\""$NAME"\" ADD hillshade_building real DEFAULT 1;"
-#hillshade_building intersection with public_military_industrial(CODE=12100)
-VALUE=`grep -i -F [public_military_industrial] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$CITY"_layers9_12 l WHERE l."$CODE"='12100' AND ST_Intersects( x.geom , l.geom );"
-#hillshade_building intersection with low_urban_fabric(CODE=11230,11240,11300)
-VALUE=`grep -i -F [low_urban_fabric] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$CITY"_layers9_12 l WHERE l."$CODE"='11230' AND ST_Intersects( x.geom , l.geom );"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$CITY"_layers9_12 l WHERE l."$CODE"='11240' AND ST_Intersects( x.geom , l.geom );"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$CITY"_layers9_12 l WHERE l."$CODE"='11300' AND ST_Intersects( x.geom , l.geom );"
-#hillshade_building intersection with medium_urban_fabric(CODE=11220)
-VALUE=`grep -i -F [medium_urban_fabric] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$CITY"_layers9_12 l WHERE l."$CODE"='11220' AND ST_Intersects( x.geom , l.geom );"
-#hillshade_building intersection with dense_urban_fabric(CODE=11210,11100)
-VALUE=`grep -i -F [dense_urban_fabric] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$CITY"_layers9_12 l WHERE l."$CODE"='11210' AND ST_Intersects( x.geom , l.geom );"
-psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET hillshade_building="$VALUE" FROM "$CITY"_layers9_12 l WHERE l."$CODE"='11100' AND ST_Intersects( x.geom , l.geom );"
 
 #TAKE EVERYTHING FROM CITY TABLE TO GENERAL TABLE
 echo -e "\e[36m...moving data to final table...\e[0m"
-psql -U "postgres" -d "clarity" -c "INSERT INTO "$LAYER" (geom,city,cell,albedo,emissivity,transmissivity,vegetation_shadow,run_off_coefficient,fua_tunnel,building_shadow,hillshade_building) (SELECT geom,city,cell,albedo,emissivity,transmissivity,vegetation_shadow,run_off_coefficient,fua_tunnel,building_shadow,hillshade_building FROM "$NAME");"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$LAYER" (geom,city,cell,albedo,emissivity,transmissivity,hillshade_building,hillshade_green_fraction,building_shadow,vegetation_shadow,run_off_coefficient,fua_tunnel) (SELECT geom,city,cell,albedo,emissivity,transmissivity,hillshade_building,hillshade_green_fraction,building_shadow,vegetation_shadow,run_off_coefficient,fua_tunnel FROM "$NAME");"
 fi
+fi
+

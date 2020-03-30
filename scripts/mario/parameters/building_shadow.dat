@@ -1,8 +1,8 @@
 [water] 1
 [roads] 1
 [railways] 1
-[trees] 0.25
-[vegetation] 0.25
+[trees] 1
+[vegetation] 1
 [agricultural_areas] 1
 [built_up] 1
 [built_open_spaces] 1

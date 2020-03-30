@@ -1,23 +1,38 @@
 #!/bin/bash
-CITIES=()
 
-#INSPECT DATABASE TO GET CITIES WITH HEAT_WAVE NOT CURRENTLY GENERATED
-psql -U "postgres" -d "clarity" -c "SELECT id,name FROM city WHERE heat_wave='false' AND pluvial_flood='false' ORDER BY id;" > cities.out
+if [[ $# -eq 0 ]] ;
+then
+    echo -e "\e[36mINFO: loading ALL cities no currently in the system.\e[0m"
+    #INSPECT DATABASE TO GET CITIES WITH HEAT_WAVE AND PLUVIAL FLOODS NOT CURRENTLY GENERATED
+    psql -U "postgres" -d "clarity" -c "SELECT id,name FROM city WHERE heat_wave='false' AND pluvial_flood='false' ORDER BY id;" > cities.out
 
-SIZE=`wc cities.out | awk '{print $1}'`
-COUNTER=1
-while read -r INPUT;
-do
+    SIZE=`wc cities.out | awk '{print $1}'`
+    COUNTER=1
+    while read -r INPUT;
+    do
 	if [[ $COUNTER -gt 2 ]] && [[ $COUNTER -lt $(($SIZE-1)) ]]
 	then
 		INPUT=${INPUT/ | /#}
 		LINES+=($INPUT)
 	fi
 	COUNTER=$((COUNTER+1))
-done < cities.out
-rm ./cities.out
+    done < cities.out
+    rm ./cities.out
+    COUNTER=$((COUNTER-5))
+else
+    echo -e "\e[36mINFO: loading cities in "$1".\e[0m"
+    COUNTER=1
+    while read -r INPUT;
+    do
+	#if line is commented with '#' ignore the city
+	if [[ "$INPUT" != \#* ]];
+	then
+		LINES+=($INPUT)
+	        COUNTER=$((COUNTER+1))
+	fi
+    done < $1
+fi
 
-COUNTER=$((COUNTER-5))
 
 #PROCESSING EACH CITY
 for LINE in ${LINES[*]}
@@ -37,16 +52,6 @@ do
 
 	source load_city.sh $CITY
 	wait
-
-#        source heat_waves_main.sh $CITY > output/$CITY/heat_wave.out 2>&1
-#        wait
-#        echo -e "\e[0mheat wave layers have been generated!"
-#        source pluvial_floods_main.sh $CITY > output/$CITY/pluvial_floods.out 2>&1
-#        wait
-#        echo -e "\e[0mpluvial flood layers have been generated!"
-#        source land_use_grid.sh $CITY > output/$CITY/land_use_grid.out 2>&1
-#        wait
-#        echo -e "\e[0mland use grid has been generated!"
 
 	#DELETE CITY LOGS
 #	rm -r output/$CITY

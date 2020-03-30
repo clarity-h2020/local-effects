@@ -2,7 +2,7 @@
 #CODE="CODE2006"
 CODE="CODE2012"
 
-LAYER="agricultural_areas"
+LAYER="sports"
 if [[ $# -eq 0 ]] ; then
     echo -e "\e[33mERROR: No city name provided!\e[0m"
     exit 1
@@ -16,10 +16,10 @@ else
 SHP=`ogrinfo $FILE | grep '1:' | cut -f 2 -d ' '`
 NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
 
-#watch out UA2012 has AGRICULTURAL AREAS (21000 arable land,22000 permanent crops,23000 pastures,24000 Complex and mixed cultivation patterns,25000 orchards)
+#UA2012 (14200 sport and leisure facilities)
 echo -e "\e[36m...Extract Urban Atlas data...\e[0m"
-ogr2ogr -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='21000' OR "$CODE"='22000' OR "$CODE"='23000' OR "$CODE"='24000' OR "$CODE"='25000'" $NAME $FILE
-#ogr2ogr -overwrite -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='20000'" $NAME $FILE
+ogr2ogr -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='14200'" $NAME $FILE
+#ogr2ogr -overwrite -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='14200'" $NAME $FILE
 shp2pgsql -k -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME.sql
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME.sql
@@ -75,6 +75,10 @@ echo -e "\e[36m...removing trees intersections...\e[0m"
 psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT t.gid as id, ST_Multi(ST_CollectionExtract(ST_Difference(ST_MakeValid(ST_SnapToGrid(t.geom,0.0001)),ST_MakeValid(ST_SnapToGrid(r.geom,0.0001))),3) ) as geom FROM "$NAME" t, "$CITY"_trees r WHERE r.cell=t.cell) as sq WHERE gid=sq.id;"
 echo -e "\e[36m...removing vegetation intersections...\e[0m"
 psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT t.gid as id, ST_Multi(ST_CollectionExtract(ST_Difference(ST_MakeValid(ST_SnapToGrid(t.geom,0.0001)),ST_MakeValid(ST_SnapToGrid(r.geom,0.0001))),3) ) as geom FROM "$NAME" t, "$CITY"_vegetation r WHERE r.cell=t.cell) as sq WHERE gid=sq.id;"
+echo -e "\e[36m...removing agricultural areas intersections...\e[0m"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT t.gid as id, ST_Multi(ST_CollectionExtract(ST_Difference(ST_MakeValid(ST_SnapToGrid(t.geom,0.0001)),ST_MakeValid(ST_SnapToGrid(r.geom,0.0001))),3) ) as geom FROM "$NAME" t, "$CITY"_agricultural_areas_grid r WHERE r.cell=t.cell) as sq WHERE gid=sq.id;"
+echo -e "\e[36m...removing built open spaces intersections...\e[0m"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT t.gid as id, ST_Multi(ST_CollectionExtract(ST_Difference(ST_MakeValid(ST_SnapToGrid(t.geom,0.0001)),ST_MakeValid(ST_SnapToGrid(r.geom,0.0001))),3) ) as geom FROM "$NAME" t, "$CITY"_built_open_spaces r WHERE r.cell=t.cell) as sq WHERE gid=sq.id;"
 
 #FIX
 echo -e "\e[36m...fixing geometries by buffering...\e[0m"
@@ -91,8 +95,9 @@ psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD emissivity real DEFA
 TRANSMISSIVITY=`grep -i -F [$LAYER] $PARAMETERS/transmissivity.dat | cut -f 2 -d ' '`
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD transmissivity real DEFAULT "$TRANSMISSIVITY";"
 
-#hillshade_buildings - NOW DONE FROM land use grid SCRIPT
-psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD hillshade_building real DEFAULT NULL;"
+#hillshade_buildings
+HILLSHADE_BUILDING=`grep -i -F ['DEFAULT'] $PARAMETERS/hillshade_buildings.dat | cut -f 2 -d ' '`
+psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD hillshade_building real DEFAULT "$HILLSHADE_BUILDING";"
 
 HILLSHADE_GREEN_FRACTION=`grep -i -F [$LAYER] $PARAMETERS/hillshade_green_fraction.dat | cut -f 2 -d ' '`
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD hillshade_green_fraction real DEFAULT "$HILLSHADE_GREEN_FRACTION";"

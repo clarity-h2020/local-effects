@@ -8,12 +8,12 @@ UA_VERSION_FILE="UA2012"
 DATA="/home/mario.nunez/script/data"
 UA_FOLDER="/home/mario.nunez/data/heat_waves/"$UA_VERSION
 STL_FOLDER="/home/mario.nunez/data/heat_waves/stl"
-#HEIGHT_FOLDER="/home/mario.nunez/data/heat_waves/height/europe"
 ESM30_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_30"
 ESM40_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_40"
 ESM50_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_50"
 
-LAYERS=("water" "roads" "railways" "trees" "vegetation" "agricultural_areas" "built_up" "built_open_spaces" "dense_urban_fabric" "medium_urban_fabric" "low_urban_fabric" "public_military_industrial")
+#falta despues de agricultural_areas poner BUILT_UP
+LAYERS=("water" "roads" "railways" "trees" "vegetation" "agricultural_areas" "built_open_spaces" "sports" "dense_urban_fabric" "medium_urban_fabric" "low_urban_fabric" "public_military_industrial")
 
 if [[ $# -eq 0 ]] ; then
     echo -e "\e[33mERROR: No city name provided!\e[0m"
@@ -25,26 +25,28 @@ if [ -f $UA_FOLDER/*$CITY* ] && [ -f $STL_FOLDER/*$CITY* ];
 then
 	echo -e "\e[36mIt seems like" $CITY "is an available city in the file system, gathering data...\e[0m"
 
-	#Inserting cell references from european grid corresponding to the city bbox
-        psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell,city) (SELECT g.gid,c.id FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.boundary) AND c.name='"$CITY"');"
-
 	#checking provided city heat wave is already loaded in database
-        psql -U "postgres" -d "clarity" -c "SELECT heat_wave FROM city WHERE UPPER(name)=UPPER('"$CITY"');" > city.out
-        FOUND=`sed "3q;d" city.out | cut -f 2 -d ' '`
+        psql -U "postgres" -d "clarity" -c "SELECT id FROM city WHERE pluvial_flood is null AND UPPER(name)=UPPER('"$CITY"');" > city.out
+        ID=`sed "3q;d" city.out | sed -e 's/^[ \t]*//'`
         rm city.out
-	if [ $FOUND == 't' ];
+
+        if [[ $ID =~ "(0 rows)" ]];
         then
 		echo -e "\e[33mERROR: "$CITY" heat wave data already loaded into the database!\e[0m"
-		echo -e "\e[33mTry setting up heat_wave "$CITY" attribute to false\e[0m"
+		echo -e "\e[33mTry setting up heat_wave "$CITY" attribute to NULL\e[0m"
         else
-                echo -e "\e[36mLoading heat wave "$CITY" data...\e[0m"
+		echo ""
+	        echo -e "\e[36m"$CITY" database ID is "$ID
+        	START=$(date '+%Y-%m-%d %H:%M:%S')
+        	echo "Starting at:" $START
+        	echo -e "\e[0m"
 
 		#create city folder
 		mkdir $DATA/$CITY
 		DATA=$DATA/$CITY
 
 		#UA
-	        echo -e "\e[36mGenerating Urban Atlas data...\e[0m"
+		echo -e "\e[36mLoading heat wave Urban Atlas "$CITY" data...\e[0m"
 	        mkdir $DATA/ua
 	        ZIP=`ls $UA_FOLDER/*$CITY*`
 	        NAME=`echo $ZIP | cut -f 7 -d '/' | cut -f 1 -d '.' | cut -f 1-5 -d '_'`
@@ -74,7 +76,7 @@ then
 		#Extracting bbox from VRT SHP indexing all raster ESM files
 		gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM30_FOLDER/esm_class_30.vrt $DATA/esm/class30_$CITY.tif
 		gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM40_FOLDER/esm_class_40.vrt $DATA/esm/class40_$CITY.tif
-		gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM50_FOLDER/esm_class_50.vrt $DATA/esm/class50_$CITY.tif
+		##gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM50_FOLDER/esm_class_50.vrt $DATA/esm/class50_$CITY.tif
 
 		#STL
 		echo -e "\e[36mGenerating Street Tree Layer data...\e[0m"
@@ -90,17 +92,6 @@ then
 		cp $DATA/stl/$NAME/Shapefiles/$NAME"_UA2012_STL.prj" $DATA/stl/
 	        rm -r $DATA/stl/$NAME
 
-		#HEIGHT (SOLO INDOOR)
-#		if [ -f $HEIGHT_FOLDER/*$CITY* ];
-#		then
-#			echo -e "\e[36mGenerating height data...\e[0m"
-#			mkdir $DATA/height
-#			TIF=`ls $HEIGHT_FOLDER/*$CITY*`
-#			NAME=`echo $TIF | cut -f 7 -d '/' | cut -f 1 -d '.' | cut -f 1,2 -d '_'`
-#			echo $NAME
-#			cp $TIF $DATA/height/$CITY"_height".tif
-#		fi
-
 		#store logs
 		mkdir -p ./output/$CITY/layers
 
@@ -108,6 +99,10 @@ then
 		#GENERATE LAYERS 9-12 TOGETHER
 		source layers9_12.sh $CITY > output/$CITY/layers/layers9_12.out 2>&1
 		wait
+
+		#insert records with cell references for current city boundary (not bbox)
+		echo -e "\e[36mGenerating land use registers...\e[0m"
+		psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell,city) SELECT g.gid,c.id FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.boundary) AND c.name='"$CITY"';"
 
 		#GENERATE 12 LAYERS
 		#run each script in corresponding order
@@ -118,10 +113,6 @@ then
 		        source $LAYER.sh > output/$CITY/layers/$LAYER.out 2>&1
 		        wait
 		done
-
-		#REGISTER THAT NEEDED DATA IS PREPARED FOR THE CITY
-                echo -e "\e[36mSet city database status to 'DATA GENERATED'\e[0m"
-                psql -U "postgres" -d "clarity" -c "UPDATE CITY SET heat_wave=TRUE WHERE NAME='"$CITY"';"
 
 		#once import finished then delete all city layers from database
 		for LAYER in "${LAYERS[@]}";
@@ -137,14 +128,43 @@ then
 		echo -e "\e[36mDeleting auxiliar layer 9-12...\e[0m"
 		psql -U "postgres" -d "clarity" -c "DROP TABLE "$CITY"_layers9_12;"
 
-		#delete log files for layers
-		#rm -r ./output/$CITY/layers
+		#set city size
+		psql -U "postgres" -d "clarity" -c "UPDATE city SET size=(SELECT COUNT(*) FROM land_use_grid WHERE city="$ID") WHERE id="$ID";"
+		#generate land use percentages per city cell
+		echo -e "\e[36mGenerating land use from heat wave data...\e[0m"
+                for TYPE in "${LAYERS[@]}";
+                do
+			echo -e "\e[36m...generating" $TYPE "percentages...\e[0m"
+        	        psql -U "postgres" -d "clarity" -c "update land_use_grid set "$TYPE"=sq.percentage from (select l.cell as cell,st_area(w.geom)/st_area(g.geom) as percentage from "$TYPE" w, land_use_grid l, laea_etrs_500m g where w.cell=l.cell AND l.cell=g.gid AND l.city="$ID") as sq where sq.cell=land_use_grid.cell;"
+		done
 
-		#delete city data
-		echo -e "\e[36mDeleting file sytem source data...\e[0m"
-		#rm -r $DATA
+		#ASSIGNMENT OF HILLSHADE_BUILDING VALUES TO LAYERS (roads,railways,vegetation,agricultura_areas,built_open_spaces)
+		LAYERS=("roads" "railways" "vegetation" "agricultural_areas" "built_open_spaces")
+		#CALCULATE BUILT AREAS PERCENTAGE IN A CELL IS THE SUM PERCENTAGES OF LAND USE OF (sports,dense_urban_fabric,medium_urban_fabric,low_urban_fabric,public_military_industrial)
+		#DETERMINE WHICH RANGE CORRESPONDS WITH CALCULATED BUILT AREAS PERCENTAGE AND APPLY CORRSPONDING HILLSHADE_BUILDING VALUE:
+		#VERY_LOW=0.1 --> assign 0.6
+		#LOW=0.25 --> assign 0.8
+		#MEDIUM=0.6 --> assign 0.9
+		#HIGH=1 --> assign 1
 
+		#BUILT DENSITY CALCULATION
+		echo -e "\e[36m...generating built_density...\e[0m"
+		psql -U "postgres" -d "clarity" -c "UPDATE land_use_grid SET built_density=sq.built_density FROM (SELECT cell,sports+built_open_spaces+dense_urban_fabric+medium_urban_fabric+low_urban_fabric+public_military_industrial as built_density FROM land_use_grid WHERE city="$ID" ) as sq WHERE land_use_grid.cell=sq.cell;"
+
+		#ASSIGN HILLSHADE_BUILDING
+		for LAYER in "${LAYERS[@]}";
+		do
+        		echo -e "\e[36m...assigning hillshade building for" $LAYER"...\e[0m"
+        		psql -U "postgres" -d "clarity" -c "UPDATE "$LAYER" SET hillshade_building=sq.hillshade_building FROM (SELECT cell, CASE WHEN built_density<0 THEN NULL WHEN built_density<=0.1 THEN 1 WHEN built_density<=0.25 THEN 0.9 WHEN built_density<=0.6 THEN 0.8 WHEN built_density<=1 THEN 0.6 ELSE NULL END AS hillshade_building FROM land_use_grid WHERE city="$ID") AS sq WHERE \""$LAYER"\".city="$ID" AND \""$LAYER"\".cell=sq.cell;"
+		done
+
+		echo ""
+                END=$(date '+%Y-%m-%d %H:%M:%S')
+                echo -e "\e[36mEnding at:" $END
+                echo -e "\e[0m"
 		echo -e "\e[36mGeneration completed for "$CITY"\e[0m"
+		TIME=`date -u -d @$(($(date -d "$END" '+%s') - $(date -d "$START" '+%s'))) '+%T'`
+                psql -U "postgres" -d "clarity" -c "UPDATE city SET heat_wave='"$TIME"' WHERE ID="$ID";"
 	fi
 else
 	echo -e "\e[33mData sources missing for "$CITY"\e[0m"

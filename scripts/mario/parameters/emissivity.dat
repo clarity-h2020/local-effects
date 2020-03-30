@@ -1,11 +1,12 @@
 [water] 0.96
-[roads] 0.9
+[roads] 0.95
 [railways] 0.85
 [trees] 0.97
-[vegetation] 0.96
-[agricultural_areas] 0.95
+[vegetation] 0.94
+[agricultural_areas] 0.94
 [built_up] 0.85
 [built_open_spaces] 0.9
+[sports] 0.96
 [dense_urban_fabric] 0.9
 [medium_urban_fabric] 0.9
 [low_urban_fabric] 0.9

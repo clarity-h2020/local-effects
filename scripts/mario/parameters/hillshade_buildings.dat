@@ -1,3 +1,4 @@
+[default] 1
 [dense_urban_fabric] 0.6
 [medium_urban_fabric] 0.8
 [low_urban_fabric] 0.9
