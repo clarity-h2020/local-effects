@@ -37,9 +37,9 @@ then
 	#total time is not set to null to recall time it takes aprox.
 	psql -U "postgres" -d "clarity" -c "UPDATE city SET heat_wave=null, pluvial_flood=null WHERE id=$ID;"
 
-	#land use grid data of the city
+	#delete land use grid data of the city
 	echo  -e "\e[36mDeleting "$CITY" land use grid data from database...\e[0m"
-        #psql -U "postgres" -d "clarity" -c "UPDATE land_use_grid SET water=0,roads=0,railways=0,trees=0,vegetation=0,agricultural_areas=0,sports=0,built_open_spaces=0,dense_urban_fabric=0,medium_urban_fabric=0,low_urban_fabric=0,public_military_industrial=0,built_density=null,mean_altitude=null,streams=0,basin=null,basin_altitude=null WHERE city=$ID;"
+        #psql -U "postgres" -d "clarity" -c "UPDATE land_use_grid SET water=0,roads=0,railways=0,trees=0,vegetation=0,agricultural_areas=0,sports=0,built_open_spaces=0,dense_urban_fabric=0,medium_urban_fabric=0,low_urban_fabric=0,public_military_industrial=0,built_density=null,mean_altitude=null,streams=0,basin=null,basin_altitude=null,run_off_average=null WHERE city=$ID;"
 	psql -U "postgres" -d "clarity" -c "delete from land_use_grid where city="$ID";"
 
 	#delete auxiliary layers table

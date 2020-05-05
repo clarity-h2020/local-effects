@@ -8,6 +8,7 @@ UA_VERSION_FILE="UA2012"
 DATA="/home/mario.nunez/script/data"
 UA_FOLDER="/home/mario.nunez/data/heat_waves/"$UA_VERSION
 STL_FOLDER="/home/mario.nunez/data/heat_waves/stl"
+ESM20_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_20"
 ESM30_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_30"
 ESM40_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_40"
 ESM50_FOLDER="/home/mario.nunez/data/heat_waves/esm/class_50"
@@ -74,9 +75,10 @@ then
 		echo -e "\e[36mGenerating and clipping European Setlement Map data...\e[0m"
 		mkdir $DATA/esm
 		#Extracting bbox from VRT SHP indexing all raster ESM files
+		gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM20_FOLDER/esm_class_20.vrt $DATA/esm/class20_$CITY.tif
 		gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM30_FOLDER/esm_class_30.vrt $DATA/esm/class30_$CITY.tif
 		gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM40_FOLDER/esm_class_40.vrt $DATA/esm/class40_$CITY.tif
-		##gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM50_FOLDER/esm_class_50.vrt $DATA/esm/class50_$CITY.tif
+		###BUILDINGS#gdal_translate -projwin $MINX $MAXY $MAXX $MINY $ESM50_FOLDER/esm_class_50.vrt $DATA/esm/class50_$CITY.tif
 
 		#STL
 		echo -e "\e[36mGenerating Street Tree Layer data...\e[0m"
@@ -128,8 +130,8 @@ then
 		echo -e "\e[36mDeleting auxiliar layer 9-12...\e[0m"
 		psql -U "postgres" -d "clarity" -c "DROP TABLE "$CITY"_layers9_12;"
 
-		#set city size
-		psql -U "postgres" -d "clarity" -c "UPDATE city SET size=(SELECT COUNT(*) FROM land_use_grid WHERE city="$ID") WHERE id="$ID";"
+		#SET CITY SIZE (IN CELL NUMBER)
+		psql -U "postgres" -d "clarity" -c "UPDATE city SET size=(SELECT COUNT(*) FROM laea_etrs_500m g, city c WHERE c.id="$ID" and ST_Intersects(g.geom,c.boundary)) WHERE id="$ID";"
 		#generate land use percentages per city cell
 		echo -e "\e[36mGenerating land use from heat wave data...\e[0m"
                 for TYPE in "${LAYERS[@]}";

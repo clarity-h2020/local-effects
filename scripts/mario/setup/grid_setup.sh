@@ -25,7 +25,7 @@ rm check.out
 if [ -z $FOUND ];
 then
         echo -e "\e[36mCreating land use grid table\e[0m"
-	psql -U "postgres" -d "clarity" -c "CREATE TABLE public.land_use_grid(id serial NOT NULL,cell integer NOT NULL REFERENCES laea_etrs_500m (gid),city integer NOT NULL REFERENCES city (id),water real default 0,roads real default 0,railways real default 0,trees real default 0,vegetation real default 0,agricultural_areas real default 0,built_open_spaces real default 0,sports real default 0,dense_urban_fabric real default 0,medium_urban_fabric real default 0,low_urban_fabric real default 0,public_military_industrial real default 0,streams real DEFAULT 0, basin integer DEFAULT null, mean_altitude DEFAULT null, built_density real DEFAULT null, basin_altitude real DEFAULT null, CONSTRAINT land_use_grid_pkey PRIMARY KEY (id));"
+	psql -U "postgres" -d "clarity" -c "CREATE TABLE public.land_use_grid(id serial NOT NULL,cell integer NOT NULL REFERENCES laea_etrs_500m (gid),city integer NOT NULL REFERENCES city (id),water real default 0,roads real default 0,railways real default 0,trees real default 0,vegetation real default 0,agricultural_areas real default 0,built_open_spaces real default 0,sports real default 0,dense_urban_fabric real default 0,medium_urban_fabric real default 0,low_urban_fabric real default 0,public_military_industrial real default 0,streams real DEFAULT 0, basin integer DEFAULT null, mean_altitude DEFAULT null, built_density real DEFAULT null, basin_altitude real DEFAULT null, run_off_average real DEFAULT null, CONSTRAINT land_use_grid_pkey PRIMARY KEY (id));"
 else
         echo -e "\e[33mERROR: land use grid already exists!e[0m"
 fi

@@ -8,25 +8,36 @@ if [[ $# -eq 0 ]] ; then
     exit 1
 fi
 CITY=$(echo "$1" | awk '{print toupper($0)}')
-#UA
-FOLDER="data/"$CITY"/ua"
-FILE=`ls -la $FOLDER/*.shp | cut -f 2 -d ':' | cut -f 2 -d ' '`
-if [ ! "$FILE" ]; then
-    echo -e "\e[33mERROR: City UA data not found!\e[0m"
-else
-SHP=`ogrinfo $FILE | grep '1:' | cut -f 2 -d ' '`
 NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
 
-#ESM40 RASTER
-FOLDER2="data/"$CITY"/esm"
-FILE2=`ls -la $FOLDER2/class40_$CITY.tif | rev | cut -f 1 -d ' ' | rev`
-if [ ! "$FILE2" ]; then
-    echo -e "\e[33mERROR: City ESM data not found!\e[0m"
+#UA DATA
+FOLDER_UA="data/"$CITY"/ua"
+FILE_UA=`ls -la $FOLDER_UA/*.shp | cut -f 2 -d ':' | cut -f 2 -d ' '`
+if [ ! "$FILE_UA" ]; then
+    echo -e "\e[33mERROR: City UA data not found!\e[0m"
 else
-NAME2=`echo $FILE2 | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
-NAME2=$(echo $NAME2 | awk '{print tolower($0)}')
-TIF=$NAME"_calculated.TIF"
-SHP2=$NAME"_calculated.shp"
+SHP_UA=`ogrinfo $FILE_UA | grep '1:' | cut -f 2 -d ' '`
+
+#ESM40 RASTER
+FOLDER_ESM="data/"$CITY"/esm"
+FILE_ESM40=`ls -la $FOLDER_ESM/class40_$CITY.tif | rev | cut -f 1 -d ' ' | rev`
+if [ ! "$FILE_ESM40" ]; then
+    echo -e "\e[33mERROR: City ESM class40 data not found!\e[0m"
+else
+NAME_ESM40=`echo $FILE_ESM40 | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
+NAME_ESM40=$(echo $NAME_ESM40 | awk '{print tolower($0)}')
+TIF_ESM40=$NAME"_calculated_class40.TIF"
+SHP_ESM40=$NAME"_calculated_class40.shp"
+
+#ESM20 RASTER
+FILE_ESM20=`ls -la $FOLDER_ESM/class20_$CITY.tif | rev | cut -f 1 -d ' ' | rev`
+if [ ! "$FILE_ESM20" ]; then
+    echo -e "\e[33mERROR: City ESM class20 data not found!\e[0m"
+else
+NAME_ESM20=`echo $FILE_ESM20 | rev | cut -f 1 -d '/' | rev | cut -f 1 -d '.'`
+NAME_ESM20=$(echo $NAME_ESM20 | awk '{print tolower($0)}')
+TIF_ESM20=$NAME"_calculated_class20.TIF"
+SHP_ESM20=$NAME"_calculated_class20.shp"
 
 
 ###############
@@ -82,48 +93,89 @@ echo -e "\e[36mgrass configuration done\e[0m"
 
 #URBAN ATLAS (14100 green urban areas, 32000 herbaceous vegetation, 33000 Open spaces with little or no vegetations,13300 land without use)
 echo -e "\e[36m...Extract Urban Atlas data...\e[0m"
-ogr2ogr -overwrite -sql "SELECT Shape_Area as area FROM "$SHP" WHERE "$CODE"='14100' OR "$CODE"='32000' OR "$CODE"='33000' OR "$CODE"='13400'" $NAME $FILE
-shp2pgsql -s 3035 -I -d $NAME/$SHP.shp $NAME > $NAME".sql"
+ogr2ogr -overwrite -sql "SELECT Shape_Area as area FROM "$SHP_UA" WHERE "$CODE"='14100' OR "$CODE"='32000' OR "$CODE"='33000' OR "$CODE"='13400'" $NAME $FILE_UA
+shp2pgsql -s 3035 -I -d $NAME/$SHP_UA.shp $NAME > $NAME".sql"
 rm -r $NAME
 psql -d clarity -U postgres -f $NAME".sql"
 rm $NAME".sql"
 
-#raster reclassification with treshold 25
-echo -e "\e[36m...Reclassifying ESM data...\e[0m"
-NODATA=`gdalinfo $FILE2 | grep 'NoData' | cut -f 2 -d '='`
-python gdal_reclassify.py $FILE2 $TIF -r "$NODATA,1" -c "<25,>=25" -d $NODATA -n true -p "COMPRESS=LZW"
+#ESM40 raster reclassification with treshold 25
+echo -e "\e[36m...Reclassifying ESM40 data...\e[0m"
+NODATA=`gdalinfo $FILE_ESM40 | grep 'NoData' | cut -f 2 -d '='`
+python gdal_reclassify.py $FILE_ESM40 $TIF_ESM40 -r "$NODATA,1" -c "<25,>=25" -d $NODATA -n true -p "COMPRESS=LZW"
 
 #parameters needed for poligonization
-LAT=`gdalinfo $TIF | grep 'latitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
-LON=`gdalinfo $TIF | grep 'longitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
-X=`gdalinfo $TIF | grep 'false_easting' | cut -f 2 -d ',' | cut -f 1 -d ']'`
-Y=`gdalinfo $TIF | grep 'false_northing' | cut -f 2 -d ',' | cut -f 1 -d ']'`
-N=`gdalinfo $TIF | grep 'Upper Left' | cut -f 6 -d ' ' | cut -f 1 -d ')'`
-S=`gdalinfo $TIF | grep 'Lower Right' | cut -f 5 -d ' ' | cut -f 1 -d ')'`
-E=`gdalinfo $TIF | grep 'Lower Right' | cut -f 4 -d ' ' | cut -f 1 -d ','`
-W=`gdalinfo $TIF | grep 'Upper Left' | cut -f 5 -d ' ' | cut -f 1 -d ','`
-RES=`gdalinfo $TIF | grep 'Pixel Size' | cut -f 4 -d ' ' | cut -f 1 -d ',' | cut -f 2 -d '('`
+LAT=`gdalinfo $TIF_ESM40 | grep 'latitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+LON=`gdalinfo $TIF_ESM40 | grep 'longitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+X=`gdalinfo $TIF_ESM40 | grep 'false_easting' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+Y=`gdalinfo $TIF_ESM40 | grep 'false_northing' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+N=`gdalinfo $TIF_ESM40 | grep 'Upper Left' | cut -f 6 -d ' ' | cut -f 1 -d ')'`
+S=`gdalinfo $TIF_ESM40 | grep 'Lower Right' | cut -f 5 -d ' ' | cut -f 1 -d ')'`
+E=`gdalinfo $TIF_ESM40 | grep 'Lower Right' | cut -f 4 -d ' ' | cut -f 1 -d ','`
+W=`gdalinfo $TIF_ESM40 | grep 'Upper Left' | cut -f 5 -d ' ' | cut -f 1 -d ','`
+RES=`gdalinfo $TIF_ESM40 | grep 'Pixel Size' | cut -f 4 -d ' ' | cut -f 1 -d ',' | cut -f 2 -d '('`
 
 #poligonization with grass
-echo -e "\e[36m...ESM raster to shapefile, GRASS polygonization...\e[0m"
+echo -e "\e[36m...ESM40 raster to shapefile, GRASS polygonization...\e[0m"
 g.proj -c proj4="+proj=laea +lat_0=$LAT +lon_0=$LON +x_0=$X +y_0=$Y +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
-r.external input="$TIF" band=1 output=rast_5bd8903d0a6372 --overwrite -o
+r.external input="$TIF_ESM40" band=1 output=rast_5bd8903d0a6372 --overwrite -o
 g.region n=$N s=$S e=$E w=$W res=$RES
 r.to.vect input=rast_5bd8903d0a6372 type="area" column="value" output=output08aad7e15cf0402da3436e32ac40c6c9 --overwrite
-v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP2" format="ESRI_Shapefile" --overwrite
-rm $TIF
+v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP_ESM40" format="ESRI_Shapefile" --overwrite
+rm $TIF_ESM40
 
 #result to database
-echo -e "\e[36m...Exporting ESM result to database...\e[0m"
-shp2pgsql -k -s 3035 -I -d $SHP2 $NAME2 > $NAME2.sql
-rm $NAME"_calculated".*
-psql -d clarity -U postgres -f $NAME2.sql
-rm $NAME2.*
+echo -e "\e[36m...Exporting ESM40 result to database...\e[0m"
+shp2pgsql -k -s 3035 -I -d $SHP_ESM40 $NAME_ESM40 > $NAME_ESM40.sql
+rm $NAME"_calculated_class40".*
+psql -d clarity -U postgres -f $NAME_ESM40.sql
+rm $NAME_ESM40.*
 
-#Putting together ESM and UA extracted data
-echo -e "\e[36m...adding previosuly extracted UA data...\e[0m"
-psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq') as gid, ST_Area(geom) as area, geom FROM public.\""$NAME2"\");"
-psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME2"\";"
+#Putting together ESM40 and UA extracted data
+echo -e "\e[36m...adding ESM40 to previosuly extracted UA data...\e[0m"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq') as gid, ST_Area(geom) as area, geom FROM public.\""$NAME_ESM40"\");"
+psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME_ESM40"\";"
+
+
+
+#ESM20 raster reclassification with treshold 25
+echo -e "\e[36m...Reclassifying ESM20 data...\e[0m"
+NODATA=`gdalinfo $FILE_ESM40 | grep 'NoData' | cut -f 2 -d '='`
+python gdal_reclassify.py $FILE_ESM20 $TIF_ESM20 -r "$NODATA,1" -c "<25,>=25" -d $NODATA -n true -p "COMPRESS=LZW"
+
+#parameters needed for poligonization
+LAT=`gdalinfo $TIF_ESM20 | grep 'latitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+LON=`gdalinfo $TIF_ESM20 | grep 'longitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+X=`gdalinfo $TIF_ESM20 | grep 'false_easting' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+Y=`gdalinfo $TIF_ESM20 | grep 'false_northing' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+N=`gdalinfo $TIF_ESM20 | grep 'Upper Left' | cut -f 6 -d ' ' | cut -f 1 -d ')'`
+S=`gdalinfo $TIF_ESM20 | grep 'Lower Right' | cut -f 5 -d ' ' | cut -f 1 -d ')'`
+E=`gdalinfo $TIF_ESM20 | grep 'Lower Right' | cut -f 4 -d ' ' | cut -f 1 -d ','`
+W=`gdalinfo $TIF_ESM20 | grep 'Upper Left' | cut -f 5 -d ' ' | cut -f 1 -d ','`
+RES=`gdalinfo $TIF_ESM20 | grep 'Pixel Size' | cut -f 4 -d ' ' | cut -f 1 -d ',' | cut -f 2 -d '('`
+
+#poligonization with grass
+echo -e "\e[36m...ESM20 raster to shapefile, GRASS polygonization...\e[0m"
+g.proj -c proj4="+proj=laea +lat_0=$LAT +lon_0=$LON +x_0=$X +y_0=$Y +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+r.external input="$TIF_ESM20" band=1 output=rast_5bd8903d0a6372 --overwrite -o
+g.region n=$N s=$S e=$E w=$W res=$RES
+r.to.vect input=rast_5bd8903d0a6372 type="area" column="value" output=output08aad7e15cf0402da3436e32ac40c6c9 --overwrite
+v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP_ESM20" format="ESRI_Shapefile" --overwrite
+rm $TIF_ESM20
+
+#result to database
+echo -e "\e[36m...Exporting ESM20 result to database...\e[0m"
+shp2pgsql -k -s 3035 -I -d $SHP_ESM20 $NAME_ESM20 > $NAME_ESM20.sql
+rm $NAME"_calculated_class20".*
+psql -d clarity -U postgres -f $NAME_ESM20.sql
+rm $NAME_ESM20.*
+
+#Putting together ESM20 and UA extracted data
+echo -e "\e[36m...adding ESM20 to previosuly extracted UA data...\e[0m"
+psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq') as gid, ST_Area(geom) as area, geom FROM public.\""$NAME_ESM20"\");"
+psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME_ESM20"\";"
+
+
 
 #FIT GEOMETRIES TO CITY BOUNDARY
 echo -e "\e[36m...deleting geometries out of boundary...\e[0m"
@@ -237,4 +289,4 @@ echo -e "\e[36m...moving data to final table...\e[0m"
 psql -U "postgres" -d "clarity" -c "INSERT INTO "$LAYER" (geom,city,cell,albedo,emissivity,transmissivity,hillshade_building,hillshade_green_fraction,building_shadow,vegetation_shadow,run_off_coefficient,fua_tunnel) (SELECT geom,city,cell,albedo,emissivity,transmissivity,hillshade_building,hillshade_green_fraction,building_shadow,vegetation_shadow,run_off_coefficient,fua_tunnel FROM "$NAME");"
 fi
 fi
-
+fi

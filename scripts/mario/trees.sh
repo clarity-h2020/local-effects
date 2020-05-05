@@ -10,11 +10,14 @@ if [[ $# -eq 0 ]] ; then
     exit 1
 fi
 CITY=$(echo "$1" | awk '{print toupper($0)}')
+NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
+
+#UA DATA
 FOLDER_UA="data/"$CITY"/ua"
 FILE_UA=`ls -la $FOLDER_UA/*.shp | cut -f 2 -d ':' | cut -f 2 -d ' '`
 SHP_UA=`ogrinfo $FILE_UA | grep '1:' | cut -f 2 -d ' '`
-NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
 
+#STL DATA
 FOLDER_STL="data/"$CITY"/stl"
 FILE_STL=`ls -la $FOLDER_STL/*.shp | rev | cut -f 1 -d ' ' | rev`
 SHP_STL=`ogrinfo $FILE_STL | grep '1:' | cut -f 2 -d ' '`

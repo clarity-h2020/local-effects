@@ -6,6 +6,7 @@ UA_VERSION="UA2012"
 UA_VERSION_FILE="UA2012"
 
 DATA="/home/mario.nunez/script/data"
+PARAMETERS="/home/mario.nunez/script/parameters"
 UA_FOLDER="/home/mario.nunez/data/heat_waves/"$UA_VERSION
 DEM_FOLDER="/home/mario.nunez/data/pluvial_floods/dem"
 BASINS_FOLDER="/home/mario.nunez/data/pluvial_floods/basins"
@@ -162,6 +163,22 @@ then
 		psql -U "postgres" -d "clarity" -c "DROP TABLE streams_"$CITY";"
 		psql -U "postgres" -d "clarity" -c "DROP TABLE basins_"$CITY";"
 		rm -r data/$CITY/dem
+
+                #RUN OFF COEFFICIENT HEIGHTED AVERAGE CALCULATION
+                #ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                WATER_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                ROAD_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                RAIL_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                TREE_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                VEG_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                AA_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                BOS_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                SPORT_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                DUF_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                MUF_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                LUF_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+                PMI_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
+		psql -U "postgres" -d "clarity" -c "UPDATE land_use_grid SET run_off_average=sq.run_off_average FROM (SELECT cell, (water*$WATER_ROC + roads*$ROAD_ROC + railways*$RAIL_ROC + trees*$TREE_ROC + vegetation*$VEG_ROC + agricultural_areas*$AA_ROC + built_open_spaces*BOS_ROC + sports*SPORT_ROC + dense_urban_fabric*DUF_ROC + medium_urban_fabric*MUF_ROC + low_urban_fabric*LUF_ROC + public_military_industrial*PMI_ROC)/12 as run_off_average FROM land_use_grid WHERE city="$ID") as sq WHERE land_use_grid.cell=sq.cell;"
 
 		echo ""
                 END=$(date '+%Y-%m-%d %H:%M:%S')
