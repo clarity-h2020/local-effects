@@ -106,6 +106,9 @@ then
 		echo -e "\e[36mGenerating land use registers...\e[0m"
 		psql -U "postgres" -d "clarity" -c "INSERT INTO land_use_grid(cell,city) SELECT g.gid,c.id FROM laea_etrs_500m g, city c WHERE ST_Intersects(g.geom,c.boundary) AND c.name='"$CITY"';"
 
+		#SET CITY SIZE (IN CELL NUMBER)
+		psql -U "postgres" -d "clarity" -c "UPDATE city SET size=(SELECT COUNT(*) FROM laea_etrs_500m g, city c WHERE c.id="$ID" and ST_Intersects(g.geom,c.boundary)) WHERE id="$ID";"
+
 		#GENERATE 12 LAYERS
 		#run each script in corresponding order
 		echo -e "\e[36mInput layer generation...\e[0m"
@@ -130,8 +133,6 @@ then
 		echo -e "\e[36mDeleting auxiliar layer 9-12...\e[0m"
 		psql -U "postgres" -d "clarity" -c "DROP TABLE "$CITY"_layers9_12;"
 
-		#SET CITY SIZE (IN CELL NUMBER)
-		psql -U "postgres" -d "clarity" -c "UPDATE city SET size=(SELECT COUNT(*) FROM laea_etrs_500m g, city c WHERE c.id="$ID" and ST_Intersects(g.geom,c.boundary)) WHERE id="$ID";"
 		#generate land use percentages per city cell
 		echo -e "\e[36mGenerating land use from heat wave data...\e[0m"
                 for TYPE in "${LAYERS[@]}";

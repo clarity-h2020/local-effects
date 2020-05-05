@@ -4,6 +4,8 @@
 CODE="CODE2012"
 VALUE="31000"
 
+START_TOTAL=$(date +%s)
+
 LAYER="trees"
 if [[ $# -eq 0 ]] ; then
     echo -e "\e[33mERROR: No city name provided!\e[0m"
@@ -35,17 +37,13 @@ rm -r $NAME"_UA"
 psql -d clarity -U postgres -f $NAME"_UA.sql"
 rm $NAME"_UA.sql"
 
-#trees STL
+#trees STL (geometries are put togheter with UA geometries, same table)
 echo -e "\e[36m...Extract STL data...\e[0m"
 ogr2ogr -sql "SELECT Shape_Area as area FROM "$SHP_STL" WHERE STL=1" $NAME"_STL" $FILE_STL
 shp2pgsql -k -s 3035 -I -a $NAME"_STL"/$SHP_STL.shp $NAME > $NAME"_STL.sql"
 rm -r $NAME"_STL"
 psql -d clarity -U postgres -f $NAME"_STL.sql"
 rm $NAME"_STL.sql"
-
-#FIT GEOMETRIES TO CITY BOUNDARY
-echo -e "\e[36m...deleting geometries out of boundary...\e[0m"
-psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" WHERE gid NOT IN (SELECT g.gid FROM "$NAME" g, city c WHERE c.NAME='"$CITY"' AND ST_Intersects(g.geom, c.boundary) );"
 
 #GEOMETRY INTEGRITY CHECK
 echo -e "\e[36m...doing geometry integrity checks...\e[0m"
@@ -71,37 +69,21 @@ psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD CONSTRAINT "$NAME"_c
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD cell integer;"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" ADD CONSTRAINT "$NAME"_cell_fkey FOREIGN KEY (cell) REFERENCES laea_etrs_500m (gid);"
 
+#FIT GEOMETRIES TO CITY BOUNDARY
+echo -e "\e[36m...deleting geometries out of boundary...\e[0m"
+psql -U "postgres" -d "clarity" -c "DELETE FROM "$NAME" WHERE gid NOT IN (SELECT g.gid FROM "$NAME" g, city c WHERE c.NAME='"$CITY"' AND ST_Intersects(g.geom, c.boundary) );"
+echo -e "\e[36m...deleting partial geometries out of boundary...\e[0m"
+psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT v.gid,ST_Multi(ST_Union(ST_CollectionExtract(ST_Intersection(v.geom,c.boundary),3))) as geom FROM city c, "$NAME" v WHERE c.NAME='"$CITY"' AND ST_Overlaps(v.geom,c.boundary) GROUP BY v.gid) as sq WHERE "$NAME".gid=sq.gid;"
+
 #MAKING GOEMETRIES GRID LIKE
 echo -e "\e[36m...generating grided geometries...\e[0m"
-psql -U "postgres" -d "clarity" -c "DROP TABLE IF EXISTS "$NAME"_grid;"
-psql -U "postgres" -d "clarity" -c "DROP SEQUENCE IF EXISTS "$NAME"_grid_seq;"
-
-psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME" DROP COLUMN area;"
 psql -U "postgres" -d "clarity" -c "CREATE TABLE "$NAME"_grid (LIKE "$NAME" INCLUDING ALL);"
+psql -U "postgres" -d "clarity" -c "DROP SEQUENCE "$NAME"_grid_seq;"
 psql -U "postgres" -d "clarity" -c "CREATE SEQUENCE "$NAME"_grid_seq START WITH 1;"
 psql -U "postgres" -d "clarity" -c "ALTER TABLE "$NAME"_grid ALTER COLUMN gid SET DEFAULT nextval('"$NAME"_grid_seq');"
-#psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME"_grid (geom,city,cell) (SELECT ST_Multi(ST_CollectionExtract(ST_Intersection(ST_MakeValid(ST_SnapToGrid(ST_Union(a.geom),0.0001)), m.geom),3)) as geom,"$ID" as city,m.gid as cell FROM "$NAME" a, laea_etrs_500m m, city c WHERE c.id='"$ID"' AND ST_Intersects(c.boundary,m.geom) AND ST_Intersects(a.geom, m.geom) GROUP BY m.geom,m.gid);"
 psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME"_grid (geom,city,cell) (SELECT ST_Multi(ST_CollectionExtract(ST_Intersection(ST_MakeValid(ST_SnapToGrid(ST_Union(a.geom),0.0001)), m.geom),3)) as geom, "$ID" as city,m.gid as cell FROM "$NAME" a, laea_etrs_500m m, land_use_grid l WHERE l.city="$ID" AND l.cell=m.gid AND ST_Intersects(a.geom, m.geom) GROUP BY m.geom,m.gid);"
-psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME";"
-NAME=$(echo $CITY"_"$LAYER"_GRID" | awk '{print tolower($0)}')
-
-#REMOVAL OF AREAS OUT CITY BOUNDARY
-#drop old table (from previous runs...)
-psql -U "postgres" -d "clarity" -c "DROP TABLE IF EXISTS "$CITY"_"$LAYER";"
-psql -U "postgres" -d "clarity" -c "DROP SEQUENCE IF EXISTS "$CITY"_"$LAYER"_seq;"
-#create new aux table
-psql -U "postgres" -d "clarity" -c "CREATE TABLE "$CITY"_"$LAYER" (LIKE "$NAME" INCLUDING ALL);"
-psql -U "postgres" -d "clarity" -c "CREATE SEQUENCE "$CITY"_"$LAYER"_seq START WITH 1;"
-#insert geometries within boundary
-echo -e "\e[36m...get grid tiles within boundary...\e[0m"
-psql -U "postgres" -d "clarity" -c "INSERT INTO "$CITY"_"$LAYER" (geom,city,cell) (SELECT geom,v.city,v.cell FROM "$NAME" v, city c WHERE c.NAME='"$CITY"' AND ST_Within(v.geom, c.boundary));"
-#insert intersection of outer geometries with city boundary
-echo -e "\e[36m...get grid tile intersections with boundary...\e[0m"
-psql -U "postgres" -d "clarity" -c "INSERT INTO "$CITY"_"$LAYER" (geom,city,cell) (SELECT ST_Multi(ST_Union(ST_CollectionExtract(ST_Intersection(v.geom,c.boundary),3))) as geom,v.city,v.cell FROM city c, "$NAME" v WHERE ST_Overlaps(v.geom,c.boundary) GROUP BY v.gid);"
-#delete old table
 psql -U "postgres" -d "clarity" -c "DROP TABLE "$NAME" CASCADE;"
-#psql -U "postgres" -d "clarity" -c "DROP SEQUENCE "$NAME"_seq;"
-NAME=$(echo $CITY"_"$LAYER | awk '{print tolower($0)}')
+NAME=$(echo $CITY"_"$LAYER"_GRID" | awk '{print tolower($0)}')
 
 #remove intersections with previous layers
 echo -e "\e[36m...removing water intersections...\e[0m"
@@ -151,3 +133,7 @@ psql -U "postgres" -d "clarity" -c "UPDATE public.\""$NAME"\" x SET fua_tunnel="
 echo -e "\e[36m...moving data to final table...\e[0m"
 psql -U "postgres" -d "clarity" -c "INSERT INTO "$LAYER" (geom,city,cell,albedo,emissivity,transmissivity,hillshade_building,hillshade_green_fraction,building_shadow,vegetation_shadow,run_off_coefficient,fua_tunnel) (SELECT geom,city,cell,albedo,emissivity,transmissivity,hillshade_building,hillshade_green_fraction,building_shadow,vegetation_shadow,run_off_coefficient,fua_tunnel FROM "$NAME");"
 fi
+
+END_TOTAL=$(date +%s)
+TIME_TOTAL=`echo $((END_TOTAL-START_TOTAL)) | awk '{printf "%d:%02d:%02d", $1/3600, ($1/60)%60, $1%60}'`
+echo -e "\e[36m- "$LAYER" ended - total time is "$TIME_TOTAL" -\e[0m"

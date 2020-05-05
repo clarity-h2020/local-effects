@@ -14,6 +14,9 @@ then
 	#shp2pgsql -k -s 3035 -I -d $SHP "laea_etrs_500m" > $SQL
 	#psql -d clarity -U postgres -f $SQL
 	#rm -r "laea_etrs_500m"
+	echo -e "\e[36m...creating index on geometry column...\e[0m"
+	psql -U "postgres" -d "clarity" -c "CREATE INDEX laea_etrs_500m_geom_index ON laea_etrs_500m USING GIST (geom);"
+	#psql -U "postgres" -d "clarity" -c "CREATE INDEX laea_etrs_500m_index ON laea_etrs_500m ((md5(ST_AsText(geom))));"
 else
         echo -e "\e[33mERROR: laea_etrs_500m table already exists!e[0m"
 fi
