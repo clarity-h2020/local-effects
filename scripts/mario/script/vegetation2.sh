@@ -1,5 +1,4 @@
-#!/bin/bash
-#CODE="CODE2006"
+#!/bin/bash CODE="CODE2006"
 CODE="CODE2012"
 
 START_TOTAL=$(date +%s)
@@ -141,41 +140,41 @@ psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME_ESM40"\";"
 
 
 #ESM20 raster reclassification with treshold 25
-echo -e "\e[36m...Reclassifying ESM20 data...\e[0m"
-NODATA=`gdalinfo $FILE_ESM40 | grep 'NoData' | cut -f 2 -d '='`
-python gdal_reclassify.py $FILE_ESM20 $TIF_ESM20 -r "$NODATA,1" -c "<25,>=25" -d $NODATA -n true -p "COMPRESS=LZW"
+#echo -e "\e[36m...Reclassifying ESM20 data...\e[0m"
+#NODATA=`gdalinfo $FILE_ESM40 | grep 'NoData' | cut -f 2 -d '='`
+#python gdal_reclassify.py $FILE_ESM20 $TIF_ESM20 -r "$NODATA,1" -c "<25,>=25" -d $NODATA -n true -p "COMPRESS=LZW"
 
 #parameters needed for poligonization
-LAT=`gdalinfo $TIF_ESM20 | grep 'latitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
-LON=`gdalinfo $TIF_ESM20 | grep 'longitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
-X=`gdalinfo $TIF_ESM20 | grep 'false_easting' | cut -f 2 -d ',' | cut -f 1 -d ']'`
-Y=`gdalinfo $TIF_ESM20 | grep 'false_northing' | cut -f 2 -d ',' | cut -f 1 -d ']'`
-N=`gdalinfo $TIF_ESM20 | grep 'Upper Left' | cut -f 6 -d ' ' | cut -f 1 -d ')'`
-S=`gdalinfo $TIF_ESM20 | grep 'Lower Right' | cut -f 5 -d ' ' | cut -f 1 -d ')'`
-E=`gdalinfo $TIF_ESM20 | grep 'Lower Right' | cut -f 4 -d ' ' | cut -f 1 -d ','`
-W=`gdalinfo $TIF_ESM20 | grep 'Upper Left' | cut -f 5 -d ' ' | cut -f 1 -d ','`
-RES=`gdalinfo $TIF_ESM20 | grep 'Pixel Size' | cut -f 4 -d ' ' | cut -f 1 -d ',' | cut -f 2 -d '('`
+#LAT=`gdalinfo $TIF_ESM20 | grep 'latitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+#LON=`gdalinfo $TIF_ESM20 | grep 'longitude_of_center' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+#X=`gdalinfo $TIF_ESM20 | grep 'false_easting' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+#Y=`gdalinfo $TIF_ESM20 | grep 'false_northing' | cut -f 2 -d ',' | cut -f 1 -d ']'`
+#N=`gdalinfo $TIF_ESM20 | grep 'Upper Left' | cut -f 6 -d ' ' | cut -f 1 -d ')'`
+#S=`gdalinfo $TIF_ESM20 | grep 'Lower Right' | cut -f 5 -d ' ' | cut -f 1 -d ')'`
+#E=`gdalinfo $TIF_ESM20 | grep 'Lower Right' | cut -f 4 -d ' ' | cut -f 1 -d ','`
+#W=`gdalinfo $TIF_ESM20 | grep 'Upper Left' | cut -f 5 -d ' ' | cut -f 1 -d ','`
+#RES=`gdalinfo $TIF_ESM20 | grep 'Pixel Size' | cut -f 4 -d ' ' | cut -f 1 -d ',' | cut -f 2 -d '('`
 
 #poligonization with grass
-echo -e "\e[36m...ESM20 raster to shapefile, GRASS polygonization...\e[0m"
-g.proj -c proj4="+proj=laea +lat_0=$LAT +lon_0=$LON +x_0=$X +y_0=$Y +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
-r.external input="$TIF_ESM20" band=1 output=rast_5bd8903d0a6372 --overwrite -o
-g.region n=$N s=$S e=$E w=$W res=$RES
-r.to.vect input=rast_5bd8903d0a6372 type="area" column="value" output=output08aad7e15cf0402da3436e32ac40c6c9 --overwrite
-v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP_ESM20" format="ESRI_Shapefile" --overwrite
-rm $TIF_ESM20
+#echo -e "\e[36m...ESM20 raster to shapefile, GRASS polygonization...\e[0m"
+#g.proj -c proj4="+proj=laea +lat_0=$LAT +lon_0=$LON +x_0=$X +y_0=$Y +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
+#r.external input="$TIF_ESM20" band=1 output=rast_5bd8903d0a6372 --overwrite -o
+#g.region n=$N s=$S e=$E w=$W res=$RES
+#r.to.vect input=rast_5bd8903d0a6372 type="area" column="value" output=output08aad7e15cf0402da3436e32ac40c6c9 --overwrite
+#v.out.ogr type="auto" input="output08aad7e15cf0402da3436e32ac40c6c9" output="$SHP_ESM20" format="ESRI_Shapefile" --overwrite
+#rm $TIF_ESM20
 
 #result to database
-echo -e "\e[36m...Exporting ESM20 result to database...\e[0m"
-shp2pgsql -k -s 3035 -I -d $SHP_ESM20 $NAME_ESM20 > $NAME_ESM20.sql
-rm $NAME"_calculated_class20".*
-psql -d clarity -U postgres -f $NAME_ESM20.sql
-rm $NAME_ESM20.*
+#echo -e "\e[36m...Exporting ESM20 result to database...\e[0m"
+#shp2pgsql -k -s 3035 -I -d $SHP_ESM20 $NAME_ESM20 > $NAME_ESM20.sql
+#rm $NAME"_calculated_class20".*
+#psql -d clarity -U postgres -f $NAME_ESM20.sql
+#rm $NAME_ESM20.*
 
 #Putting together ESM20 and UA extracted data
-echo -e "\e[36m...adding ESM20 to previosuly extracted UA data...\e[0m"
-psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq') as gid, ST_Area(geom) as area, geom FROM public.\""$NAME_ESM20"\");"
-psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME_ESM20"\";"
+#echo -e "\e[36m...adding ESM20 to previosuly extracted UA data...\e[0m"
+#psql -U "postgres" -d "clarity" -c "INSERT INTO "$NAME" (SELECT NEXTVAL('"$NAME"_gid_seq') as gid, ST_Area(geom) as area, geom FROM public.\""$NAME_ESM20"\");"
+#psql -U "postgres" -d "clarity" -c "DROP TABLE public.\""$NAME_ESM20"\";"
 
 
 
@@ -211,6 +210,7 @@ psql -U "postgres" -d "clarity" -c "UPDATE "$NAME" SET geom=sq.geom FROM (SELECT
 
 #MAKING GOEMETRIES GRID LIKE
 echo -e "\e[36m...generating grided geometries...\e[0m"
+psql -U "postgres" -d "clarity" -c "CREATE INDEX "$NAME"_geom_index ON "$NAME" USING GIST (geom);"
 psql -U "postgres" -d "clarity" -c "CREATE TABLE "$NAME"_grid (LIKE "$NAME" INCLUDING ALL);"
 psql -U "postgres" -d "clarity" -c "DROP SEQUENCE "$NAME"_grid_seq;"
 psql -U "postgres" -d "clarity" -c "CREATE SEQUENCE "$NAME"_grid_seq START WITH 1;"

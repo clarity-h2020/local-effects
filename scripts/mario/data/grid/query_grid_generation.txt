@@ -1,0 +1,21 @@
+shp2pgsql -s 3035 -I barna_cells.shp > barna_cells.sql
+shp2pgsql -s 3035 -I laea_etrs_500m_fix.shp > laea_etrs_500m_fix.sql
+psql -d clarity -U postgres -h localhost -f barna_cells.sql
+
+alter table barna_cells drop column "left", drop column top, drop column "right", drop column bottom, drop column id;
+alter table barna_cells add column gridid character varying(254);
+
+update barna_cells
+set gridid=sq.newid
+from (
+select gid,CONCAT('500mE',SUBSTRING(ST_Xmin(geom)::varchar,1,5),'N',SUBSTRING(ST_Ymin(geom)::varchar,1,5) ) as newid
+from barna_cells
+) as sq
+where barna_Cells.gid=sq.gid;
+
+--insert into laea_Etrs_500m (gridid,geom) (select gridid,geom from barna_cells)
+
+pgsql2shp -f laea_etrs_500m -h localhost -u postgres -P N#mnj.78 clarity "select * from laea_etrs_500m"
+shp2pgsql -s 3035 -I laea_etrs_500m.shp > laea_etrs_500m.sql
+
+NO SON ORIGINALES TODAS LAS CELDAS POR ENCIMA DEL GID=18450604 (esa justo si es original, lo posterior no)

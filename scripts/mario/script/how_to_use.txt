@@ -1,0 +1,75 @@
+#1 
+setup_grid.sh
+Load european LAEA 500m grid into database
+
+#2
+setup_heat_wave.sh
+Generate final tables for land use procesed cities data
+
+#3
+setup_pluvial_flood.sh
+Generate final tables for streams and basins procesed cities data
+Also insert into database original tables for european basins and streams.
+
+#mortality
+import mortality data for cities into clarity database from Heinrich csv file obtained from eurostat web site
+
+#4
+city.sh
+Analysis of Urban Atlas, European Settlement Maps and Street Tree Layer data sources currently in the system (also check cities with mortality data) and find 
+which cities are available for processing.
+As well it generates table where all found cities are stored with its boundaries geometry and flags to know if a city has been processed for pluvial floods or heat waves.
+Generate land use grid cell entries in land use grid table
+Generate mean altitude for each city grid cell in land use grid table
+
+#5
+load_all.sh
+This script checks database to see which heat wave and pluvial flood data is already calculated for the citties in the system, then takes those one which are not calculated and
+calls for the rest of the scripts to do the calculation as follows:
+------
+#5.1
+heat_waves_main.sh
+For a given city it gathers needed data from file system, preparing it for further processing and calls to layers9_12 then call land use scripts(12).
+Generates each grid cell register for alnd use wich its corresponding land use percentages of each cell and hillshade building and built_density
+
+#5.1.1
+layers9_12.sh
+For a given city and by using prepared data for the city in the file system, it is able to generate and store it in database data corresponding to layers 9,10,11 and 12 
+all toghether to support each future single layer processing.
+
+#5.1.2 LAYERS (Land use scripts)
+(water.sh,roads.sh,railways.sh,trees.sh,vegetation.sh,agricultural_areas.sh,sports.sh,built_open_spaces.sh,dense_urban_fabric.sh,medium_urban_fabric.sh,low_urban_fabric.sh,public_military_industrial.sh)
+Each one of those can generate its corresponding land use data for a given city and store it in database corresponding final table
+
+#5.2
+pluvial_flood_main.sh
+For a given city it gathers needed data from database and process it to generate final data for streams and basins related to the given city, storying results in corresponding database tables
+Generates basin altitudes, cell altitudes and stream count
+
+-----
+
+#N
+load_city.sh
+This script is able to load into the database all data for a specific city given as paramater.
+
+#N
+delete_city.sh
+This script is able to delete from database all auxuliary tables, and all goemetries from final tables, for every layer as well as local auxiliary files in data folder for a given city name.
+
+------
+------
+
+start_load.sh
+Just to call load_all.sh but to in background mode
+nohup bash load_all.sh > output/load.out 2>&1 &
+
+stop_load.sh
+just reminders of wich console commands to use in order to stop load_all.sh running background.
+killall load_all.sh
+kill <ID>
+ps aux | grep -i load_all.sh
+
+
+
+RUN SINGLE SCRIPT
+bash vegetation.sh alba_iulia > vegetation.out 2>&1

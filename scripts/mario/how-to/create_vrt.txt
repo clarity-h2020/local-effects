@@ -1,6 +1,0 @@
-#GENERATE INDEX SHAPEFILE
-gdaltindex index_eu_dem.shp *.TIF
-#GENERATE VIRTUAL RESOURCE
-gdalbuildvrt eu_dem.vrt index_eu_dem.shp
-#GET SUBSET
-gdal_translate -projwin ulx uly lrx lry inraster.tif outraster.tif

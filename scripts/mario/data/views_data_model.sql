@@ -3,7 +3,7 @@ CREATE OR REPLACE VIEW public.view_land_use_grid
  SELECT l.id,
     l.cell,
     l.city,
-	c.name,
+    c.name,
     l.water,
     l.roads,
     l.railways,
@@ -21,11 +21,13 @@ CREATE OR REPLACE VIEW public.view_land_use_grid
     l.mean_altitude AS altitude,
     l.built_density,
     l.basin_altitude AS minimum,
+	l.run_off_average,
     g.geom,
     g.gridid AS cell_name
    FROM land_use_grid l,
-    laea_etrs_500m g, city c
-  WHERE l.cell=g.gid and l.city=c.id;
+    laea_etrs_500m g,
+    city c
+  WHERE l.cell = g.gid AND l.city = c.id;
   
   
 CREATE OR REPLACE VIEW public.view_mortality
