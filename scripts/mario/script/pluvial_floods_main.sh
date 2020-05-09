@@ -88,8 +88,10 @@ then
                 psql -d clarity -U postgres -f $DATA/dem/dem_$CITY"_basins.sql"
                 rm $DATA/dem/dem_$CITY"_aux.tif"
                 rm $DATA/dem/dem_$CITY"_basins.sql"
+		rm $DATA/dem/dem_$CITY"_basins.tif"
 
 		#actualizar tabla basins de la ciudad con el calculo de la altura minima de cada unas de las basins
+		echo -e "\e[36m...update basins minimum_altitude...\e[0m"
 		psql -U "postgres" -d "clarity" -c "update basins_"$CITY" set min_altitude=sq.minimum FROM (select b.gid as basin,(ST_SummaryStats(ST_Clip(r.rast,b.geom))).min as minimum from dem_"$CITY"_basins r, basins_"$CITY" b) as sq where basins_"$CITY".gid=sq.basin;"
 
 		#VOLCAR SOBRE TABLA GLOBAL Y BORRAR LA TABLA DEL SHAPEFILE DE LA CIUDAD ACTUAL
@@ -140,6 +142,9 @@ then
 		gdalwarp -ts 1456 1236 -r bilinear $DATA/dem/dem_$CITY.tif $DATA/dem/dem_$CITY"_bilinear.tif"
 		raster2pgsql -I -C -s 3035 -M $DATA/dem/dem_$CITY"_bilinear.tif" dem_$CITY"_bilinear" > $DATA/dem/dem_$CITY"_bilinear.sql"
 		psql -d clarity -U postgres -f $DATA/dem/dem_$CITY"_bilinear.sql"
+		rm $DATA/dem/dem_$CITY"_bilinear.tif"
+		rm $DATA/dem/dem_$CITY"_bilinear.sql"
+		rm $DATA/dem/dem_$CITY.tif
 
 		echo -e "\e[36m...calculating cell mean altitude for "$CITY"...\e[0m"
 		psql -U "postgres" -d "clarity" -c "UPDATE land_use_grid SET mean_altitude=sq.mean FROM (SELECT g.gid,(ST_SummaryStats(ST_Clip(r.rast, g.geom))).mean FROM dem_"$CITY"_bilinear r, land_use_grid lug, laea_etrs_500m g WHERE lug.city="$ID" AND lug.cell=g.gid) as sq WHERE sq.gid=land_use_grid.cell;"
@@ -162,23 +167,21 @@ then
 		psql -U "postgres" -d "clarity" -c "DROP TABLE dem_"$CITY"_basins;"
 		psql -U "postgres" -d "clarity" -c "DROP TABLE streams_"$CITY";"
 		psql -U "postgres" -d "clarity" -c "DROP TABLE basins_"$CITY";"
-		rm -r data/$CITY/dem
 
                 #RUN OFF COEFFICIENT HEIGHTED AVERAGE CALCULATION
-                #ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
-                WATER_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                ROAD_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                RAIL_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                TREE_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                VEG_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                AA_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                BOS_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                SPORT_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                DUF_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                MUF_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                LUF_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-                PMI_ROC=`grep -i -F [$LAYER] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '
-		psql -U "postgres" -d "clarity" -c "UPDATE land_use_grid SET run_off_average=sq.run_off_average FROM (SELECT cell, (water*$WATER_ROC + roads*$ROAD_ROC + railways*$RAIL_ROC + trees*$TREE_ROC + vegetation*$VEG_ROC + agricultural_areas*$AA_ROC + built_open_spaces*BOS_ROC + sports*SPORT_ROC + dense_urban_fabric*DUF_ROC + medium_urban_fabric*MUF_ROC + low_urban_fabric*LUF_ROC + public_military_industrial*PMI_ROC)/12 as run_off_average FROM land_use_grid WHERE city="$ID") as sq WHERE land_use_grid.cell=sq.cell;"
+                WATER_ROC=`grep -F [water] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                ROAD_ROC=`grep -F [roads] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                RAIL_ROC=`grep -F [railways] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                TREE_ROC=`grep -F [trees] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                VEG_ROC=`grep -F [vegetation] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                AA_ROC=`grep -F [agricultural_areas] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                BOS_ROC=`grep -F [built_open_spaces] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                SPORT_ROC=`grep -F [sports] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                DUF_ROC=`grep -F [dense_urban_fabric] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                MUF_ROC=`grep -F [medium_urban_fabric] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                LUF_ROC=`grep -F [low_urban_fabric] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+                PMI_ROC=`grep -F [public_military_industrial] $PARAMETERS/run_off_coefficient.dat | cut -f 2 -d ' '`
+		psql -U "postgres" -d "clarity" -c "UPDATE land_use_grid SET run_off_average=sq.run_off_average FROM (SELECT cell, (water*$WATER_ROC + roads*$ROAD_ROC + railways*$RAIL_ROC + trees*$TREE_ROC + vegetation*$VEG_ROC + agricultural_areas*$AA_ROC + built_open_spaces*$BOS_ROC + sports*$SPORT_ROC + dense_urban_fabric*$DUF_ROC + medium_urban_fabric*$MUF_ROC + low_urban_fabric*$LUF_ROC + public_military_industrial*$PMI_ROC)/12 as run_off_average FROM land_use_grid WHERE city="$ID") as sq WHERE land_use_grid.cell=sq.cell;"
 
 		echo ""
                 END=$(date '+%Y-%m-%d %H:%M:%S')
